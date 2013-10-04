@@ -4,9 +4,10 @@ from .uri import QueryString
 
 
 class Request(object):
-  def __init__(self, environ, match=None):
+  def __init__(self, app, environ, match=None):
+    self.app = app
     self.environ = environ
-    self.__match = match
+    self.match = match
     self.headers = RequestHeaders()
     self.wsgi = RequestHeaders()
     self.params = DotDict(match.match.groupdict())

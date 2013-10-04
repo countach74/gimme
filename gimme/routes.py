@@ -2,6 +2,7 @@ import re
 from .errors import RouteError
 from .request import Request
 from .response import Response
+from .controller import ErrorController
 
 
 class PatternMatch(object):
@@ -66,6 +67,9 @@ class Routes(object):
     self.__delete = []
     self.__all = []
 
+    self.http404 = Route(self, '*', [], ErrorController.http404)
+    self.http500 = Route(self, '*', [], ErrorController.http500)
+
   def _add(self, routes_list, pattern, *args, **kwargs):
     middleware = args[:-1]
     fn = kwargs['fn'] if 'fn' in kwargs else None
@@ -105,5 +109,6 @@ class Routes(object):
       for i in match_list:
         match = i.match(environ)
         if match:
-          return Request(environ, match), Response(i)
-    return None
+          return Request(self.app, environ, match), Response(self.app, i)
+
+    return Request(self.app, environ, None), Response(self.app, self.http404)
