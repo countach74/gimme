@@ -1,6 +1,7 @@
 import re
 from .errors import RouteError
 from .request import Request
+from .response import Response
 
 
 class PatternMatch(object):
@@ -11,41 +12,51 @@ class PatternMatch(object):
 
 class Pattern(object):
   __sub_pattern = re.compile(':([a-zA-Z_\-0-9]+)(\?)?')
+  __sub_last_pattern = re.compile('\/:([a-zA-Z_\-0-9]+)(\?)?$')
 
   def __init__(self, route, regex):
     self.route = route
 
     if isinstance(regex, str):
-      self.regex = self.make_regex(regex)
+      self._regex = self._make_regex(regex)
     else:
-      self.regex = regex
+      self._regex = regex
 
   def match(self, uri):
-    match = self.regex.match(uri)
+    match = self._regex.match(uri)
     return PatternMatch(self, match) if match else None
 
-  def make_regex(self, string):
-    string = '^%s$' % string
+  def _make_regex(self, string):
     def handle_replace(match):
       return '(?P<%s>[a-zA-Z0-9_\-\.,]+)%s' % (match.group(1),
         match.group(2) or '')
-    pattern = re.sub(self.__sub_pattern, handle_replace, string)
+
+    def handle_last_replace(match):
+      return '(?P<__last>/)?(?(__last)(?P<{0}>[a-zA-Z0-9_\-\.,]+){1})(/)?'.format(match.group(1),
+        match.group(2) or '')
+
+    pattern = self.__sub_last_pattern.sub(handle_last_replace, string)
+    pattern = '^%s$' % self.__sub_pattern.sub(handle_replace, pattern)
     return re.compile(pattern)
 
 
 class Route(object):
-  def __init__(self, routes, pattern, middleware, method):
+  def __init__(self, routes, pattern, middleware, method, match_fn=None):
     self.routes = routes
     self.pattern = Pattern(self, pattern)
     self.middleware = middleware
     self.method = method
+    self.match_fn = match_fn
 
-  def match(self, uri):
-    return self.pattern.match(uri)
+  def match(self, environ):
+    uri = environ[self.routes.match_param]
 
+    if not self.match_fn or (self.match_fn and self.match_fn(uri, environ)):
+      return self.pattern.match(uri)
 
 class Routes(object):
-  def __init__(self, app, match_param='REQUEST_URI', strip_trailing_slash=True):
+  def __init__(self, app, match_param='PATH_INFO', strip_trailing_slash=True):
+    self.app = app
     self.match_param = match_param
     self.strip_trailing_slash = strip_trailing_slash
 
@@ -55,28 +66,29 @@ class Routes(object):
     self.__delete = []
     self.__all = []
 
-  def _add(self, routes_list, pattern, *args):
+  def _add(self, routes_list, pattern, *args, **kwargs):
     middleware = args[:-1]
+    fn = kwargs['fn'] if 'fn' in kwargs else None
     try:
       method = args[-1]
     except IndexError, e:
       raise RouteError("No controller method specified.")
-    routes_list.append(Route(self, pattern, middleware, method))
+    routes_list.append(Route(self, pattern, middleware, method, fn))
 
-  def get(self, pattern, *args):
-    self._add(self.__get, pattern, *args)
+  def get(self, pattern, *args, **kwargs):
+    self._add(self.__get, pattern, *args, **kwargs)
 
-  def post(self, pattern, *args):
-    self._add(self.__post, pattern, *args)
+  def post(self, pattern, *args, **kwargs):
+    self._add(self.__post, pattern, *args, **kwargs)
 
-  def put(self, pattern, *args):
-    self._add(self.__put, pattern, *args)
+  def put(self, pattern, *args, **kwargs):
+    self._add(self.__put, pattern, *args, **kwargs)
 
-  def delete(self, pattern, *args):
-    self._add(self.__delete, pattern, *args)
+  def delete(self, pattern, *args, **kwargs):
+    self._add(self.__delete, pattern, *args, **kwargs)
 
-  def all(self, pattern, *args):
-    self._add(self.__all, pattern, *args)
+  def all(self, pattern, *args, **kwargs):
+    self._add(self.__all, pattern, *args, **kwargs)
 
   def match(self, environ):
     request_methods = {
@@ -87,12 +99,11 @@ class Routes(object):
     }
 
     request_method = environ['REQUEST_METHOD'].upper()
-    uri = environ[self.match_param]
 
     if request_method in request_methods:
       match_list = request_methods[request_method]
       for i in match_list:
-        match = i.match(uri)
+        match = i.match(environ)
         if match:
-          return Request(self.app, environ, match)
+          return Request(environ, match), Response(i)
     return None

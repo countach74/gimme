@@ -1,11 +1,10 @@
 from .headers import RequestHeaders
 from .dotdict import DotDict
-from urlparse import parse_qs
+from .uri import QueryString
 
 
 class Request(object):
-  def __init__(self, app, environ, match):
-    self.app = app
+  def __init__(self, environ, match=None):
     self.environ = environ
     self.__match = match
     self.headers = RequestHeaders()
@@ -14,7 +13,8 @@ class Request(object):
 
     self._populate_headers(environ)
 
-    self.query = DotDict(parse_qs(self.headers.query_string))
+    self.query = QueryString(self.headers.query_string
+      if 'query_string' in self.headers else '')
 
   def _populate_headers(self, environ):
     for k, v in environ.iteritems():
