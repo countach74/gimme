@@ -10,7 +10,7 @@ class Request(object):
     self.match = match
     self.headers = RequestHeaders()
     self.wsgi = RequestHeaders()
-    self.params = DotDict(match.match.groupdict())
+    self.params = DotDict(match.match.groupdict() if match else {})
 
     self._populate_headers(environ)
 

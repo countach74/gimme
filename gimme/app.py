@@ -16,7 +16,7 @@ class App(object):
     self.__render_engines = {}
     self.__env_config = {}
 
-    self.app_dir = os.path.abspath(sys.argv[0])
+    self.app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
     # Dictionary to store defined params
     self.__params = {}
@@ -46,6 +46,7 @@ class App(object):
 
   def render(self, template, params):
     junk, ext = os.path.splitext(template)
+    ext = ext[1:]
     if ext in self.__render_engines:
       return self.__render_engines[ext](template, params)
     else:

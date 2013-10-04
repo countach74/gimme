@@ -2,3 +2,5 @@
 *~
 .*.swp
 /gimme.egg-info
+/.project
+/.pydevproject

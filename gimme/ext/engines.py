@@ -5,7 +5,7 @@ from jinja2 import Environment, PackageLoader, FileSystemLoader, ChoiceLoader
 
 class Jinja2Extension(object):
   def __init__(self, environment=None):
-    app_path = os.path.abspath(sys.argv[0])
+    app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
     default_template_dir = os.path.join(app_path, 'views')
 
     if not environment:

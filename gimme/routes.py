@@ -28,6 +28,9 @@ class Pattern(object):
     return PatternMatch(self, match) if match else None
 
   def _make_regex(self, string):
+    if string == '*':
+      return re.compile('.*')
+      
     def handle_replace(match):
       return '(?P<%s>[a-zA-Z0-9_\-\.,]+)%s' % (match.group(1),
         match.group(2) or '')
@@ -93,6 +96,12 @@ class Routes(object):
 
   def all(self, pattern, *args, **kwargs):
     self._add(self.__all, pattern, *args, **kwargs)
+    
+  def _find_match(self, environ, match_list):
+    for i in match_list:
+      match = i.match(environ)
+      if match:
+        return Request(self.app, environ, match), Response(self.app, i)
 
   def match(self, environ):
     request_methods = {
@@ -106,9 +115,14 @@ class Routes(object):
 
     if request_method in request_methods:
       match_list = request_methods[request_method]
-      for i in match_list:
-        match = i.match(environ)
-        if match:
-          return Request(self.app, environ, match), Response(self.app, i)
+      result = self._find_match(environ, match_list)
+      if result:
+        return result
 
-    return Request(self.app, environ, None), Response(self.app, self.http404)
+    result = self._find_match(environ, self.__all)
+    if result:
+      return result
+
+
+    result = Request(self.app, environ, None), Response(self.app, self.http404)
+    return result
