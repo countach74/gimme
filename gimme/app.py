@@ -16,7 +16,7 @@ class App(object):
     self.__render_engines = {}
     self.__env_config = {}
 
-    self.app_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
+    self.dirname = os.path.dirname(os.path.abspath(sys.argv[0]))
 
     # Dictionary to store defined params
     self.__params = {}
@@ -24,7 +24,7 @@ class App(object):
     # Dictionary to store app config
     self.__config = {
       'env': 'development',
-      'views': os.path.join(self.app_dir, 'views'),
+      'views': os.path.join(self.dirname, 'views'),
       'view engine': 'html'
     }
 

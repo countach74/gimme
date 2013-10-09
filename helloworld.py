@@ -29,5 +29,9 @@ app.set('default headers', {
 })
 
 
+app.use(gimme.Static('public'))
+app.use(gimme.CookieParser())
+
+
 if __name__ == '__main__':
   app.listen()

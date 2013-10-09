@@ -1,3 +1,5 @@
+import time
+import datetime
 from .headers import ResponseHeaders
 
 
@@ -74,7 +76,7 @@ class Response(object):
   def __init__(self, app, route):
     self.app = app
     self.route = route
-    self.status_code = '200 OK'
+    self._status = '200 OK'
 
     try:
       self.headers = ResponseHeaders(dict(app.get('default headers')))
@@ -86,14 +88,22 @@ class Response(object):
 
   def status(self, status):
     if isinstance(status, int):
-      self.status_code = '%s %s' % (status, self._status_code_map[status])
+      self._status = '%s %s' % (status, self._status_code_map[status])
     else:
-      self.status_code = status
+      self._status = status
     return self
+
+  @property
+  def status_code(self):
+    return int(self._status.split(None, 1)[0])
+
+  @property
+  def status_message(self):
+    return int(self._status.split(None, 1)[1])
     
   def _prepare(self, method, start_response):
     self.body = method()
-    start_response(self.status_code, self.headers.items())
+    start_response(self._status, self.headers.items())
     
   def set(self, key, value):
     self.headers[key] = value
@@ -110,3 +120,29 @@ class Response(object):
 
   def type(self, content_type):
     self.set('Content-Type', content_type)
+
+  def cookie(self, key, value, expires=None, http_only=False, secure=False, path='/', domain=None):
+    cookie_string = ['%s=%s' % (key, value)]
+
+    if domain:
+      cookie_string.append('Domain=%s' % domain)
+
+    if path:
+      cookie_string.append('Path=%s' % path)
+
+    if expires:
+      if isinstance(expires, int):
+        date = datetime.datetime.fromutctimestamp(time.mktime(time.gmtime()))
+      elif isinstance(expires, datetime.datetime):
+        date = expires
+      else:
+        date = datetime.datetime.utcnow()
+      cookie_string.append('Expires=%s' % date.stftime('%a, %d %b %Y %H:%M:%S GMT'))
+
+    if secure:
+      cookie_string.append('Secure')
+
+    if http_only:
+      cookie_string.append('HttpOnly')
+
+    self.set('Set-Cookie', '; '.join(cookie_string))

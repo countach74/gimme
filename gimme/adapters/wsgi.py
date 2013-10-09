@@ -9,7 +9,8 @@ class WSGIAdapter(object):
 
   def _get_middleware(self, request, response):
     all_middleware = self.app._middleware + response.route.middleware
-    return map(lambda x: x(self.app, request, response), all_middleware)
+    map(lambda x: x._setup(self.app, request, response), all_middleware)
+    return all_middleware
 
   def process(self, environ, start_response):
     request, response = self.app.routes.match(environ)
