@@ -9,11 +9,13 @@ class Jinja2Extension(object):
     default_template_dir = os.path.join(app_path, 'views')
 
     if not environment:
-      environment = Environment(loader=ChoiceLoader([
-        FileSystemLoader(default_template_dir),
-        PackageLoader('gimme', 'views')]))
+      environment = Environment(loader=FileSystemLoader(default_template_dir))
 
     self.environment = environment
+    self.environment.loader = ChoiceLoader([
+      self.environment.loader,
+      PackageLoader('gimme', 'templates')
+    ])
 
   def __call__(self, template, params):
     return self.environment.get_template(template).render(params)

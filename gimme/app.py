@@ -11,7 +11,7 @@ from .ext.engines import Jinja2Extension
 class App(object):
   def __init__(self):
     self.routes = Routes(self)
-    self.__middleware = []
+    self._middleware = []
     self.__wsgi = WSGIAdapter(self)
     self.__render_engines = {}
     self.__env_config = {}
@@ -54,7 +54,7 @@ class App(object):
         template)
 
   def use(self, middleware):
-    self.__middleware.append(middleware)
+    self._middleware.append(middleware)
 
   def set(self, key, value):
     self.__config[key] = value

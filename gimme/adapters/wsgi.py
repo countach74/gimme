@@ -1,10 +1,31 @@
+import contextlib
+from ..response import Response
+from ..controller import ErrorController
+
+
 class WSGIAdapter(object):
   def __init__(self, app):
     self.app = app
+
+  def _get_middleware(self, request, response):
+    all_middleware = self.app._middleware + response.route.middleware
+    return map(lambda x: x(self.app, request, response), all_middleware)
 
   def process(self, environ, start_response):
     request, response = self.app.routes.match(environ)
     controller = response._controller_class(self.app, request, response)
     method = getattr(controller, response._method_name)
-    response._prepare(method, start_response)
-    yield str(response.body)
+
+    all_middleware = self._get_middleware(request, response)
+
+    try:
+      with contextlib.nested(*all_middleware):
+        response._prepare(method, start_response)
+    except Exception, e:
+      err_response = Response(self.app, self.app.routes.http500)
+      err_controller = ErrorController(self.app, request, err_response)
+      with contextlib.nested(*all_middleware):
+        err_response._prepare(err_controller.http500, start_response)
+      yield str(err_response.body)
+    else:
+      yield str(response.body)

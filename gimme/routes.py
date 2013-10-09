@@ -74,7 +74,7 @@ class Routes(object):
     self.http500 = Route(self, '*', [], ErrorController.http500)
 
   def _add(self, routes_list, pattern, *args, **kwargs):
-    middleware = args[:-1]
+    middleware = list(args[:-1])
     fn = kwargs['fn'] if 'fn' in kwargs else None
     try:
       method = args[-1]
@@ -122,7 +122,6 @@ class Routes(object):
     result = self._find_match(environ, self.__all)
     if result:
       return result
-
 
     result = Request(self.app, environ, None), Response(self.app, self.http404)
     return result
