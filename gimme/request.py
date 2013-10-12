@@ -101,7 +101,7 @@ class Request(object):
     self.accepted = AcceptedList(self.headers.accept if 'accept' in
       self.headers else None)
 
-    self.cookie = self.headers.cookie if 'cookie' in self.headers else ''
+    self.cookies = self.headers.cookie if 'cookie' in self.headers else ''
 
   def _populate_headers(self, environ):
     for k, v in environ.iteritems():

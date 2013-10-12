@@ -3,11 +3,16 @@ import re
 import os
 import random
 from .dotdict import DotDict
-from .ext.sessionstores import MemoryStore
+from .ext.session import MemoryStore, Session as _Session
 
 
 class Middleware(object):
   __metaclass__ = abc.ABCMeta
+
+  def __init__(self, app, request, response):
+    self.app = app
+    self.request = request
+    self.response = response
 
   def __enter__(self):
     self.enter()
@@ -18,11 +23,6 @@ class Middleware(object):
     self.traceback = traceback
     self.exit()
 
-  def _setup(self, app, request, response):
-    self.app = app
-    self.request = request
-    self.response = response
-
   @abc.abstractmethod
   def enter(self):
     pass
@@ -32,86 +32,97 @@ class Middleware(object):
     pass
 
 
-class Static(Middleware):
-  def __init__(self, path, expose_as=None):
-    self.path = path
-    self.expose_as = (expose_as or os.path.basename(path)).strip('/')
-    self.pattern = re.compile('^/%s/.*' % re.escape(self.expose_as))
+def static(path, expose_as=None):
+  expose_as = (expose_as or os.path.basename(path)).strip('/')
+  pattern = re.compile('^/%s.*' % re.escape(expose_as))
 
-    import mimetypes
-    mimetypes.init()
-    self.mimetypes = mimetypes
+  import mimetypes
+  mimetypes.init()
 
-  def enter(self):
-    match = self.pattern.match(self.request.headers.path_info)
-    self._file = None
-    self.local_path = None
+  class Static(Middleware):
+    def enter(self):
+      match = pattern.match(self.request.headers.path_info)
+      self._file = None
+      self._local_path = None
 
-    if match:
-      self.local_path = self._get_local_path(self.request.headers.path_info)
-      if self.local_path:
-        self.response.set('Content-Type', self.mimetypes.guess_type(self.local_path)[0])
+      if match:
+        self._local_path = self._get_local_path(self.request.headers.path_info)
+        if self._local_path:
+          self.response.set('Content-Type', mimetypes.guess_type(self._local_path)[0])
 
-  def exit(self):
-    if self.local_path:
+    def exit(self):
+      if self._local_path:
+        try:
+          with open(self._local_path, 'r') as f:
+            self._serve(f)
+        except OSError, e:
+          pass
+
+    def _serve(self, f):
+      self.response.body = f.read()
+
+    def _get_local_path(self, local_path):
+      temp_path = path.strip('/')[len(self.expose_as):].lstrip('/')
+      temp_path2 = os.path.join(path, local_path)
+      if temp_path2.startswith(path) and os.path.exists(temp_path2):
+        return temp_path2
+      else:
+        return None
+
+  return Static
+
+
+def cookie_parser():
+  class CookieParser(Middleware):
+    def enter(self):
       try:
-        with open(self.local_path, 'r') as f:
-          self._serve(f)
-      except OSError, e:
-        pass
+        data = self.request.cookies.split('; ')
+      except AttributeError:
+        self.request.cookies = DotDict()
+        return
 
-  def _serve(self, f):
-    self.response.body = f.read()
+      self.request.cookies = DotDict()
+      for i in data:
+        if i:
+          split = i.split('=', 1)
+          if split:
+            self.request.cookies[split[0]] = split[1]
 
-  def _get_local_path(self, path):
-    path = path.strip('/')[len(self.expose_as):].lstrip('/')
-    local_path = os.path.join(self.path, path)
-    if local_path.startswith(self.path) and os.path.exists(local_path):
-      return local_path
-    else:
-      return None
+    def exit(self):
+      print self.request.cookies
 
-
-class CookieParser(Middleware):
-  def enter(self):
-    data = self.request.cookies.split('; ')
-    self.request.cookies = DotDict()
-    for i in data:
-      if i:
-        split = i.split('=', 1)
-        if split:
-          self.request.cookies[split[0]] = split[1]
-
-  def exit(self):
-    print self.request.cookies
+  return CookieParser
 
 
-class Session(Middleware):
-  def __init__(self, store=MemoryStore, key='gimme_session'):
-    if hasattr(store, '__init__'):
-      store = store()
-    self._store = store
-    self._key = key
+def session(store=MemoryStore, session_key='gimme_session'):
+  storage = store()
 
-  def enter(self):
-    self.request.session = self._load_session()
+  class Session(Middleware):
+    def enter(self):
+      self.request.session = self._load_session()
 
-  def exit(self):
-    self._store.set(
+    def exit(self):
+      self.request.session.save()
 
-  def _load_session(self):
-    try:
-      cookie = self.request.cookies[self._key]
-    except KeyError:
-      return self._create_session()
+    def _load_session(self):
+      try:
+        key = self.request.cookies[session_key]
+      except KeyError:
+        return self._create_session()
 
-    return self._store.get(cookie)
+      try:
+        return storage.get(key)
+      except KeyError, e:
+        return self._create_session()
 
-  def _create_session(self):
-    key = self._make_session_key()
-    self.request.session[self._key] = key
-    self.response.set('Set-Cookie', self._key, key)
-    return {}
+    def _create_session(self):
+      key = self._make_session_key()
+      self.response.set('Set-Cookie', '%s=%s' % (session_key, key))
+      new_session = _Session(storage, key, {})
+      storage.set(key, new_session)
+      return new_session
 
-  def _make_session_key(self, num_bits=256):
-    return '%02x' % random.getrandbits(num_bits)
+    def _make_session_key(self, num_bits=256):
+      return '%02x' % random.getrandbits(num_bits)
+
+  return Session

@@ -5,7 +5,7 @@ app = gimme.App()
 
 
 class RootController(gimme.Controller):
-  @gimme.json()
+  @gimme.view('index.html')
   def index(self):
     return {'this': 'that'}
 
@@ -29,8 +29,9 @@ app.set('default headers', {
 })
 
 
-app.use(gimme.Static('public'))
-app.use(gimme.CookieParser())
+app.use(gimme.middleware.static('public'))
+app.use(gimme.middleware.cookie_parser())
+app.use(gimme.middleware.session())
 
 
 if __name__ == '__main__':
