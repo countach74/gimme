@@ -54,7 +54,10 @@ class App(object):
         template)
 
   def use(self, middleware):
-    self._middleware.append(middleware)
+    if not isinstance(middleware, list):
+      middleware = [middleware]
+    for i in middleware:
+      self._middleware.append(i)
 
   def set(self, key, value):
     self.__config[key] = value

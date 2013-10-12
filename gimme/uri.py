@@ -26,3 +26,18 @@ class QueryString(object):
     else:
       return object.__setattr__(self, key, value)
     return object.__setattr__(self, key, value)
+
+  def __getitem__(self, key):
+    try:
+      return self.__getattr__(key)
+    except AttributeError:
+      raise KeyError(key)
+
+  def __setitem__(self, key, value):
+    self.__setattr__(key, value)
+
+  def __delitem__(self, key):
+    del(self._parsed[key])
+
+  def __contains__(self, key):
+    return key in self._parsed

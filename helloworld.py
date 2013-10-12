@@ -27,8 +27,10 @@ app.set('default headers', {
 
 
 app.use(gimme.middleware.static('public'))
+app.use(gimme.middleware.method_override())
 app.use(gimme.middleware.cookie_parser())
 app.use(gimme.middleware.session())
+app.use(gimme.middleware.body_parser())
 
 
 if __name__ == '__main__':

@@ -130,3 +130,100 @@ def session(store=MemoryStore, session_key='gimme_session'):
       return '%02x' % random.getrandbits(num_bits)
 
   return Session
+
+
+def json():
+  from json import loads as decode_json
+
+  class Json(Middleware):
+    def enter(self):
+      if ('content_type' in self.request.headers and
+          self.request.headers.content_type == 'application/json'):
+
+        raw_body = self.request.raw_body
+
+        try:
+          parsed_data = decode_json(raw_body)
+        except ValueError:
+          self.request.body = DotDict({})
+        else:
+          self.request.body = DotDict(parsed_data)
+      else:
+        self.request.body = DotDict({})
+
+    def exit(self):
+      pass
+
+  return Json
+
+
+def urlencoded(use_as_fallback=True):
+  from .uri import QueryString
+
+  class UrlEncoded(Middleware):
+    def enter(self):
+      self.request.body = DotDict({})
+
+      if (('content_type' in self.request.headers and
+          self.request.headers.content_type == 'application/x-www-form-urlencoded')
+          or use_as_fallback):
+
+        self.request.body = QueryString(self.request.raw_body)
+
+    def exit(self):
+      pass
+
+  return UrlEncoded
+
+
+def multipart():
+  multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
+
+  class Multipart(Middleware):
+    def enter(self):
+      self.request.body = DotDict({})
+
+      if ('content_type' in self.request.headers and
+          'request_method' in self.request.headers and
+          self.request.headers.request_method in ('PUT', 'POST')):
+
+        match = multipart_pattern.match(self.request.headers.content_type)
+
+        if match:
+          mp = MultipartParser(self.request.wsgi.input, boundary=
+            match.group(1))
+          for i in mp:
+            if i.filename:
+              self.request.body[i.name] = i
+            else:
+              self.request.body[i.name] = i.value
+  
+    def exit(self):
+      pass
+
+  return Multipart
+
+
+def body_parser(json_args={}, urlencoded_args={}, multipart_args={}):
+  return [
+    json(**json_args),
+    urlencoded(**urlencoded_args),
+    multipart(**multipart_args)
+  ]
+
+
+def method_override():
+  multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
+
+  class MethodOverride(Middleware):
+    def enter(self):
+      if ('content_type' in self.request.headers and
+          self.request.headers.content_type == 'application/x-www-form-urlencoded'):
+        query_string = QueryString(self.request.raw_body)
+        if '_method' in query_string:
+          self.request.headers.request_method = query_string._method
+
+    def exit(self):
+      pass
+
+  return MethodOverride

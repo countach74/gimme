@@ -92,6 +92,7 @@ class Request(object):
     self.headers = RequestHeaders()
     self.wsgi = RequestHeaders()
     self.params = DotDict(match.match.groupdict() if match else {})
+    self.__raw_body = None
 
     self._populate_headers(environ)
 
@@ -118,3 +119,13 @@ class Request(object):
 
   def accepts(self, content_type):
     return content_type in self.accepted
+
+  @property
+  def raw_body(self):
+    if self.__raw_body is None:
+      if ('request_method' in self.headers and
+          self.headers.request_method in ('PUT', 'POST')):
+        self.__raw_body = self.wsgi.input.read()
+      else:
+        self.__raw_body = ''
+    return self.__raw_body
