@@ -205,14 +205,30 @@ def multipart():
 
 
 def body_parser(json_args={}, urlencoded_args={}, multipart_args={}):
-  return [
-    json(**json_args),
-    urlencoded(**urlencoded_args),
-    multipart(**multipart_args)
-  ]
+  json_parser = json(**json_args)
+  urlencoded_parser = urlencoded(**urlencoded_args)
+  multipart_parser = multipart(**multipart_args)
+
+  class BodyParser(Middleware):
+    def __init__(self, *args, **kwargs):
+      Middleware.__init__(self, *args, **kwargs)
+      self._json = json_parser(*args, **kwargs)
+      self._multipart = multipart_parser(*args, **kwargs)
+      self._urlencoded = urlencoded_parser(*args, **kwargs)
+
+    def enter(self):
+      self._json.enter()
+      self._multipart.enter()
+      self._urlencoded.enter()
+
+    def exit(self):
+      pass
+
+  return BodyParser
 
 
 def method_override():
+  from .uri import QueryString
   multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
   class MethodOverride(Middleware):
@@ -227,3 +243,21 @@ def method_override():
       pass
 
   return MethodOverride
+
+
+def compress():
+  import zlib
+
+  class Compress(Middleware):
+    def enter(self):
+      pass
+
+    def exit(self):
+      if 'accept_encoding' in self.request.headers:
+        if 'deflate' in self.request.headers.accept_encoding.split(','):
+          compressed = zlib.compress(self.response.body)
+          self.response.headers['Content-Encoding'] = 'deflate'
+          self.response.headers['Content-Length'] = str(len(compressed))
+          self.response.body = compressed
+
+  return Compress

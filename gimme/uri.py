@@ -8,6 +8,9 @@ class QueryString(object):
     self._query_string = query_string
     self._parsed = parse_qs(query_string)
 
+  def __repr__(self):
+    return 'QueryString(%s)' % self._parsed
+
   def __getattr__(self, key):
     if key not in QueryString._reserved_attrs:
       try:

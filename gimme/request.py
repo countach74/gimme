@@ -124,8 +124,24 @@ class Request(object):
   def raw_body(self):
     if self.__raw_body is None:
       if ('request_method' in self.headers and
-          self.headers.request_method in ('PUT', 'POST')):
-        self.__raw_body = self.wsgi.input.read()
+          self.headers.request_method in ('PUT', 'POST') and
+          'content_length' in self.headers):
+        content_length = int(self.headers.content_length)
+        self.__raw_body = self.wsgi.input.read(content_length)
       else:
         self.__raw_body = ''
     return self.__raw_body
+
+  def param(self, key):
+    if key in self.params:
+      return self.params[key]
+    elif hasattr(self, 'body') and key in self.body:
+      return self.body[key]
+    elif key in self.query:
+      return self.query[key]
+    raise KeyError(key)
+
+  @property
+  def xhr(self):
+    return ('x_requested_with' in self.headers and
+      self.headers.x_requested_with == 'XMLHttpRequest')
