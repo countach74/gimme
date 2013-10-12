@@ -15,6 +15,10 @@ class RootController(gimme.Controller):
   def get(self):
     return 'data: %s' % self.request.session.get('crap', None)
 
+  def not_found(self):
+    self.response.status(404)
+    return "That can't be good!"
+
 
 class FormController(gimme.Controller):
   records = []
@@ -58,12 +62,14 @@ app.routes.get('/form/new', FormController.new)
 app.routes.get('/form/:id', FormController.show)
 app.routes.post('/form', FormController.create)
 
+app.routes.get('*', RootController.not_found)
+
 app.set('default headers', {
   'Content-Type': 'text/html'
 })
 
 
-#app.use(gimme.middleware.compress())
+app.use(gimme.middleware.compress())
 app.use(gimme.middleware.static('public'))
 app.use(gimme.middleware.method_override())
 app.use(gimme.middleware.cookie_parser())

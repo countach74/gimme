@@ -65,7 +65,7 @@ def static(path, expose_as=None):
     def _get_local_path(self, local_path):
       local_path = local_path.strip('/')[len(expose_as):].lstrip('/')
       temp_path = os.path.join(path, local_path)
-      if temp_path.startswith(path) and os.path.exists(temp_path):
+      if temp_path.startswith(path) and os.path.isfile(temp_path):
         return temp_path
       else:
         return None
