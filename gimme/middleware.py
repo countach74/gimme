@@ -62,7 +62,7 @@ def static(path, expose_as=None):
       self.response.body = f.read()
 
     def _get_local_path(self, local_path):
-      temp_path = path.strip('/')[len(self.expose_as):].lstrip('/')
+      temp_path = path.strip('/')[len(expose_as):].lstrip('/')
       temp_path2 = os.path.join(path, local_path)
       if temp_path2.startswith(path) and os.path.exists(temp_path2):
         return temp_path2
@@ -89,7 +89,7 @@ def cookie_parser():
             self.request.cookies[split[0]] = split[1]
 
     def exit(self):
-      print self.request.cookies
+      pass
 
   return CookieParser
 
@@ -99,10 +99,12 @@ def session(store=MemoryStore, session_key='gimme_session'):
 
   class Session(Middleware):
     def enter(self):
+      self._new_session = False
       self.request.session = self._load_session()
 
     def exit(self):
-      self.request.session.save()
+      if self.request.session._state.is_dirty() or self._new_session:
+        self.request.session.save()
 
     def _load_session(self):
       try:
@@ -116,6 +118,7 @@ def session(store=MemoryStore, session_key='gimme_session'):
         return self._create_session()
 
     def _create_session(self):
+      self._new_session = True
       key = self._make_session_key()
       self.response.set('Set-Cookie', '%s=%s' % (session_key, key))
       new_session = _Session(storage, key, {})

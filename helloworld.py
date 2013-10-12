@@ -9,21 +9,18 @@ class RootController(gimme.Controller):
   def index(self):
     return {'this': 'that'}
 
-  @gimme.format('text/html')
-  def test(self):
-    return {'this': 'that crap'}
+  def set(self):
+    self.request.session['crap'] = 'oh no!'
+    return 'ok cool, set stuff'
 
-  @test.add_type('application/json')
-  def test(self):
-    return {'some': 'test'}
-
-  def wut(self):
-    return 'this should break: %s' % wuuuut
+  def get(self):
+    return 'data: %s' % self.request.session.get('crap', None)
 
 
 app.routes.get('/', RootController.index)
-app.routes.get('/test', RootController.test)
-app.routes.get('/wut', RootController.wut)
+app.routes.get('/get', RootController.get)
+app.routes.get('/set', RootController.set)
+
 app.set('default headers', {
   'Content-Type': 'text/html'
 })

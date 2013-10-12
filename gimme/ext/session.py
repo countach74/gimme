@@ -18,7 +18,7 @@ class MemoryStore(BaseStore):
     self._sessions = {}
 
   def __repr__(self):
-    return "MemoryStore(%s)" % ', '.join(self._sessions.keys())
+    return "MemoryStore(%s)" % ', '.join(map(repr, self._sessions.values()))
 
   def get(self, key):
     return self._sessions[key]
@@ -113,11 +113,16 @@ class Session(object):
     self._data = NotifiedDict(self._state, data)
 
   def save(self):
-    if self._state.is_dirty():
-      self._store.set(self._key, self._data)
+    self._store.set(self._key, self)
 
   def __getitem__(self, key):
     return self._data[key]
 
   def __setitem__(self, key, value):
     self._data[key] = value
+
+  def get(self, *args, **kwargs):
+    return self._data.get(*args, **kwargs)
+
+  def __repr__(self):
+    return "Session(%s)" % (self._key[0:10],)
