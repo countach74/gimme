@@ -101,9 +101,8 @@ class Response(object):
   def status_message(self):
     return int(self._status.split(None, 1)[1])
     
-  def _prepare(self, method, start_response):
+  def _prepare(self, method):
     self.body = method()
-    start_response(self._status, self.headers.items())
     
   def set(self, key, value):
     self.headers[key] = value

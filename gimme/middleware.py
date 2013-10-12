@@ -52,6 +52,7 @@ def static(path, expose_as=None):
 
     def exit(self):
       if self._local_path:
+        self.response.status(200)
         try:
           with open(self._local_path, 'r') as f:
             self._serve(f)
@@ -62,10 +63,10 @@ def static(path, expose_as=None):
       self.response.body = f.read()
 
     def _get_local_path(self, local_path):
-      temp_path = path.strip('/')[len(expose_as):].lstrip('/')
-      temp_path2 = os.path.join(path, local_path)
-      if temp_path2.startswith(path) and os.path.exists(temp_path2):
-        return temp_path2
+      local_path = local_path.strip('/')[len(expose_as):].lstrip('/')
+      temp_path = os.path.join(path, local_path)
+      if temp_path.startswith(path) and os.path.exists(temp_path):
+        return temp_path
       else:
         return None
 
