@@ -11,6 +11,9 @@ class WSGIAdapter(object):
     all_middleware = self.app._middleware + response.route.middleware
     return map(lambda x: x(self.app, request, response), all_middleware)
 
+  def _get_app_middleware(self, request, response):
+    return map(lambda x: x(self.app, request, response), self.app._middleware)
+
   def process(self, environ, start_response):
     request, response = self.app.routes.match(environ)
     controller = response._controller_class(self.app, request, response)
@@ -25,7 +28,7 @@ class WSGIAdapter(object):
       err_response = Response(self.app, self.app.routes.http500)
       err_controller = ErrorController(self.app, request, err_response)
 
-      with contextlib.nested(*all_middleware):
+      with contextlib.nested(*self._get_app_middleware(request, response)):
         err_response._prepare(err_controller.http500)
 
       start_response(err_response._status, err_response.headers.items())

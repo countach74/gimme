@@ -85,6 +85,7 @@ class Response(object):
 
     self._controller_class = route.method.im_class
     self._method_name = route.method.__name__
+    self.body = ''
 
   def status(self, status):
     if isinstance(status, int):

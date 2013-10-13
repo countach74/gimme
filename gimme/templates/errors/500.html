@@ -1,11 +1,11 @@
 <h1>500 Internal Server Error</h1>
 
 <p>
-  Wuuut???!!
+  Oh snap! Something's borked. :(
 </p>
 
-<ul>
-  {% for line in traceback %}
-    <li>{{line}}</li>
-  {% endfor %}
-</ul>
+<pre>
+{% for line in traceback -%}
+{{line}}
+{%- endfor %}
+</pre>

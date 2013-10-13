@@ -261,3 +261,21 @@ def compress():
           self.response.body = compressed
 
   return Compress
+
+
+def profiler(fn=None, pr=None):
+  import cProfile
+
+  if pr is None:
+    pr = cProfile.Profile()
+
+  class Profiler(Middleware):
+    def enter(self):
+      pr.enable()
+
+    def exit(self):
+      pr.disable()
+      if fn:
+        fn(pr)
+
+  return Profiler

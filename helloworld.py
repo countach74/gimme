@@ -6,7 +6,7 @@ app = gimme.App()
 
 class RootController(gimme.Controller):
   def index(self):
-    return self.app.render('index.html', {'headers': self.request.headers.items()})
+    return "Hello, world!"
 
   def set(self):
     self.request.session['crap'] = 'oh no!'
@@ -14,6 +14,9 @@ class RootController(gimme.Controller):
 
   def get(self):
     return 'data: %s' % self.request.session.get('crap', None)
+
+  def make_error(self):
+    return crap
 
   def not_found(self):
     self.response.status(404)
@@ -56,6 +59,7 @@ class FormController(gimme.Controller):
 app.routes.get('/', RootController.index)
 app.routes.get('/get', RootController.get)
 app.routes.get('/set', RootController.set)
+app.routes.get('/error', RootController.make_error)
 
 app.routes.get('/form', FormController.index)
 app.routes.get('/form/new', FormController.new)
