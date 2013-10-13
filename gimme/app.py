@@ -1,6 +1,6 @@
 import os
 import sys
-from wsgiref.simple_server import make_server
+#from wsgiref.simple_server import make_server
 from .routes import Routes
 from .errors import TemplateError
 from .adapters.wsgi import WSGIAdapter
@@ -36,10 +36,10 @@ class App(object):
     return self.__wsgi.process(environ, start_response)
 
   def listen(self, port=8080, host='127.0.0.1'):
-    #server = HTTPServer(self, host, port)
-    #server.start()
-    server = make_server(host, port, self)
-    server.serve_forever()
+    server = HTTPServer(self, host, port)
+    server.start()
+    #server = make_server(host, port, self)
+    #server.serve_forever()
 
   def engine(self, ext, callback):
     self.__render_engines[ext] = callback
