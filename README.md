@@ -63,3 +63,18 @@ if __name__ == '__main__':
 By default, Jinja2 is used for a template engine, but other adapters
 can be written as well. More documentation to come on how to do this
 (until then, check out the gimme/ext/engines.py file).
+
+One thing to note is that Gimme's HTTP server is, unlike Node's, a
+development server and is not intended to be used for production.
+Instead, Gimme apps are WSGI-compliant; you are recommended to pick
+any one of the many ways of deploying a WSGI app (personally, I
+recommend FastCGI via Lighttpd).
+
+Using flup, one can turn the above example into a FastCGI app like so:
+
+```python
+from flup.server.fcgi import WSGIServer
+
+if __name__ == '__main__':
+  WSGIServer(app).run()
+```
