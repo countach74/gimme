@@ -1,0 +1,7 @@
+{% if record %}
+  <h3>Record: {{record.name}}</h3>
+  <p>{{record.data}}</p>
+{% else %}
+  <h3>Record not found!</h3>
+{% endif %}
+<p><a href="/form">Back to Records</a></p>
