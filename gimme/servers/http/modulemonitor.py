@@ -18,7 +18,7 @@ class ModuleMonitor(threading.Thread):
 		threading.Thread.__init__(self)
 
 	def run(self):
-		#logger.log_info("Starting module reloader...")
+		self.server.logger.log_info("Starting module reloader...")
 		datetime.datetime.now()
 		last_scan = datetime.datetime.now()
 		
@@ -30,7 +30,7 @@ class ModuleMonitor(threading.Thread):
 			if now > last_scan + delta:
 				new_stats = self.stat_modules()
 				if not self.compare_stats(old_stats, new_stats):
-					#logger.log_info("File changed, reloading server...")
+					self.server.logger.log_info("File changed, reloading server...")
 					self.server.stop()
 					self.restart_app()
 				old_stats = new_stats
@@ -44,7 +44,7 @@ class ModuleMonitor(threading.Thread):
 		return self._stop.is_set()
 
 	def stop(self):
-		#logger.log_info("Stopping module reloader...")
+		self.server.logger.log_info("Stopping module reloader...")
 		self._stop.set()
 		
 	def compare_stats(self, old, new):

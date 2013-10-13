@@ -1,13 +1,14 @@
 from .connection import Connection
 from ...errors import FDError
 from . import modulemonitor
+from ..logger import StdLogger
 import select
 import socket
 import signal
 
 
 class HTTPServer(object):
-  def __init__(self, app, host='localhost', port=8080, listen=5, max_read=8092, chunk_size=1024, auto_reload=True):
+  def __init__(self, app, host='localhost', port=8080, listen=5, max_read=8092, chunk_size=1024, auto_reload=True, logger=StdLogger()):
     self.app = app
     self.host = host
     self.port = port
@@ -15,6 +16,7 @@ class HTTPServer(object):
     self.chunk_size = chunk_size
     self.max_read = max_read
     self.auto_reload = auto_reload
+    self.logger = logger
 
 
     self.connections = []
@@ -55,7 +57,7 @@ class HTTPServer(object):
     try:
       self._bind_socket()
     except socket.error, e:
-      #logger.log_error("Could not start HTTP Server: %s" % e.args[1])
+      self.logger.log_error("Could not start HTTP Server: %s" % e.args[1])
       sys.exit(1)
 
     self._setup_signal_handlers()
@@ -63,7 +65,7 @@ class HTTPServer(object):
     if self.auto_reload:
       self.module_monitor.start()
 
-    #logger.log_info("Frame HTTP Server is now ready")
+    self.logger.log_info("Gimme HTTP Server is now ready")
 
     while self.running:
       try:
@@ -95,7 +97,7 @@ class HTTPServer(object):
         i.handle_error()
 
   def stop(self, stop_monitor=False):
-    #logger.log_info("Shutting down Frame HTTP Server...")
+    self.logger.log_info("Shutting down Gimme HTTP Server...")
 
     for i in self.connections:
       i.close()

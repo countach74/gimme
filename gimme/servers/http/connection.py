@@ -1,8 +1,10 @@
 import os
 import sys
+import datetime
 from StringIO import StringIO
 from .headers import RequestHeaders, RequestLine
 from ...errors import FDError
+from ...dotdict import DotDict
 
 
 def parse_body(request):
@@ -10,6 +12,59 @@ def parse_body(request):
     return request.split('\r\n\r\n', 1)[1]
   except IndexError:
     return ''
+  
+  
+def populate_format_data(connection, response_length, environ):
+  now = datetime.datetime.now()
+  timestamp = now.strftime("%d %b %Y %H:%M:%S")
+
+  try:
+    status_code, status_message = connection.status.split(None, 1)
+  except ValueError:
+    status_code = 'INVALID'
+    status_message = 'INVALID'
+
+  if 'http_user_agent' in environ:
+    user_agent = environ.http_user_agent
+  else:
+    user_agent = '-'
+
+  if 'referer' in environ:
+    referer = environ.referer
+  else:
+    referer = '-'
+
+  return {
+    'remote_host': environ.remote_addr if 'remote_addr' in environ else '-',
+    'timestamp': timestamp,
+    'request_line': "%s %s %s" % (
+      environ.request_method if 'request_method' in environ else '-',
+      environ.request_uri if 'request_uri' in environ else '-',
+      environ.server_protocol if 'server_protocol' in environ else '-'),
+    'status_code': status_code,
+    'body_size': response_length,
+    'local_address': environ.server_addr if 'server_addr' in environ else '-',
+    'environment': environ,
+    'request_protocol': environ.server_protocol if 'server_protocol' in environ else '-',
+    'request_method': environ.request_method if 'request_method' in environ else '-',
+    'server_port': environ.server_port if 'server_port' in environ else '-',
+    'query_string': environ.query_string if 'query_string' in environ else '-',
+    'request_uri': environ.request_uri if 'request_uri' in environ else '-',
+    'server_name': environ.server_name if 'server_name' in environ else '-',
+    'user_agent': user_agent,
+    'referer': referer
+  }
+
+
+def log_access(connection, response_length, all_headers):
+  environ = DotDict({})
+
+  for k, v in all_headers.iteritems():
+    environ[k.lower()] = v
+    
+  format_data = populate_format_data(connection, response_length, environ)
+  print ("%(remote_host)s [%(timestamp)s] \"%(request_line)s\" %(status_code)s "
+      "%(body_size)s \"%(referer)s\" \"%(user_agent)s\"" % format_data)
 
 
 class Connection(object):
@@ -126,7 +181,7 @@ class Connection(object):
       'SERVER_PORT': self.server.port,
       'SERVER_NAME': self.server.host,
       'SERVER_PROTOCOL': 'HTTP/1.1',
-      'SERVER_SOFTWARE': 'Frame/0.1a',
+      'SERVER_SOFTWARE': 'Gimme 0.1.0',
       'REMOTE_ADDR': self.addr[0],
       'REMOTE_PORT': self.addr[1],
       'GATEWAY_INTERFACE': 'CGI/1.1',
@@ -152,12 +207,15 @@ class Connection(object):
     finally:
       # Send headers
       headers_sent = False
+      response_length = 0
 
       # Send response
       for i in response:
         if not headers_sent:
           self.send_headers(self.status, self.headers)
           headers_sent = True
+        response_length += len(i)
+        log_access(self, response_length, all_headers)
         self.send(i)
 
       self.write_buffer.append(None)
