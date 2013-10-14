@@ -1,6 +1,7 @@
 import os
 import sys
 import datetime
+import socket
 from StringIO import StringIO
 from .headers import RequestHeaders, RequestLine
 from ...errors import FDError
