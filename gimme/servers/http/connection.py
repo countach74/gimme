@@ -36,7 +36,7 @@ def populate_format_data(connection, response_length, environ):
         referer = '-'
 
     return {
-        'remote_host': environ.remote_addr if (
+        'remote_host': (environ.remote_addr if
             'remote_addr' in environ else '-'),
         'timestamp': timestamp,
         'request_line': "%s %s %s" % (
@@ -45,20 +45,20 @@ def populate_format_data(connection, response_length, environ):
             environ.server_protocol if 'server_protocol' in environ else '-'),
         'status_code': status_code,
         'body_size': response_length,
-        'local_address': environ.server_addr if (
+        'local_address': (environ.server_addr if
             'server_addr' in environ else '-'),
         'environment': environ,
-        'request_protocol': environ.server_protocol if (
+        'request_protocol': (environ.server_protocol if
             'server_protocol' in environ else '-'),
-        'request_method': environ.request_method if (
+        'request_method': (environ.request_method if
             'request_method' in environ else '-'),
-        'server_port': environ.server_port if (
+        'server_port': (environ.server_port if
             'server_port' in environ else '-'),
-        'query_string': environ.query_string if (
+        'query_string': (environ.query_string if
             'query_string' in environ else '-'),
-        'request_uri': environ.request_uri if (
+        'request_uri': (environ.request_uri if
             'request_uri' in environ else '-'),
-        'server_name': environ.server_name if (
+        'server_name': (environ.server_name if
             'server_name' in environ else '-'),
         'user_agent': user_agent,
         'referer': referer
