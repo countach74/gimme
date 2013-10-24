@@ -1,49 +1,42 @@
-from gimme.app import App
+import gimme
 import unittest
+from .test_helpers import make_environ
 
 
-class TestRoutes(unittest.TestCase):
+class RoutesTest(unittest.TestCase):
   def setUp(self):
-    self.app = App()
+    self.app = gimme.App()
 
-    def endpoint():
-      return 'cool'
+    class TestController(gimme.Controller):
+        def endpoint1(self):
+            return 'endpoint1_response'
 
-    self.endpoint = endpoint
+    self.controller = TestController
 
   def test_query_string(self):
-    self.app.routes.get('/', self.endpoint) 
+    self.app.routes.get('/', self.controller.endpoint1) 
 
-    request = self.app.routes.match({
-      'REQUEST_METHOD': 'GET',
-      'PATH_INFO': '/',
-      'QUERY_STRING': 'id=3'
-    })
+    request, response = self.app.routes.match(make_environ(
+        path_info='/', query_string='id=3'))
 
     self.assertEqual(request.query.id, '3')
 
   def test_param(self):
-    self.app.routes.get('/user/:id', self.endpoint)
+    self.app.routes.get('/user/:id', self.controller.endpoint1)
     
-    request = self.app.routes.match({
-      'REQUEST_METHOD': 'GET',
-      'PATH_INFO': '/user/4'
-    })
+    request, response = self.app.routes.match(make_environ(
+        path_info='/user/4'))
 
     self.assertEqual(request.params.id, '4')
 
   def test_optional_param(self):
-    self.app.routes.get('/user/:id/:message?', self.endpoint)
+    self.app.routes.get('/user/:id/:message?', self.controller.endpoint1)
 
-    request = self.app.routes.match({
-      'REQUEST_METHOD': 'GET',
-      'PATH_INFO': '/user/3/4'
-    })
+    request, response = self.app.routes.match(make_environ(
+        path_info='/user/3/4'))
 
-    request2 = self.app.routes.match({
-      'REQUEST_METHOD': 'GET',
-      'PATH_INFO': '/user/3'
-    })
+    request2, response2 = self.app.routes.match(make_environ(
+        path_info='/user/3'))
 
     self.assertEqual(request.params.id, '3')
     self.assertTrue(bool(request2))

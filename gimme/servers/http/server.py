@@ -68,7 +68,7 @@ class HTTPServer(object):
         if self.auto_reload:
             self.module_monitor.start()
 
-        self.logger.log_info("Gimme HTTP Server is now ready")
+        self.logger.log_info("Gimme Asynchronous HTTP Server is now ready")
 
         while self.running:
             try:

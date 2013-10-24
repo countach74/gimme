@@ -81,6 +81,16 @@ class AcceptedList(object):
 
         return candidates[0] if len(candidates) else None
 
+    def __iter__(self):
+        for i in self._data:
+            yield i
+
+    def __contains__(self, key):
+        for i in self._data:
+            if i.test(key):
+                return True
+        return False
+
     def __repr__(self):
         return str(self._data)
 
@@ -120,6 +130,24 @@ class Request(object):
 
     def accepts(self, content_type):
         return content_type in self.accepted
+
+    def is_type(self, query):
+        try:
+            content_type = self.headers.content_type
+        except AttributeError, e:
+            return False
+        q_split = query.split('/', 1)
+        c_split = content_type.split('/', 1)
+        if len(c_split) != 2:
+            return False
+        if len(q_split) == 2:
+            if q_split[1] == '*' and q_split[0] == c_split[0]:
+                return True
+            else:
+                return q_split[0] == c_split[0] and q_split[1] == c_split[1]
+        elif len(q_split) == 1:
+            return q_split[0] == c_split[1]
+        return False
 
     @property
     def raw_body(self):

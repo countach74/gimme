@@ -4,3 +4,5 @@
 /gimme.egg-info
 /.project
 /.pydevproject
+/build
+/dist

@@ -14,7 +14,7 @@ class Header(object):
 
     def __eq__(self, other):
         if isinstance(other, str):
-            return self.key == other.key
+            return self.value == other
         else:
             return self is other
 
@@ -52,6 +52,10 @@ class HeadersDict(object):
 
     def __str__(self):
         return self.render()
+
+    def __iter__(self):
+        for i in self._headers:
+            yield i
 
     def _set_header(self, key, value):
         header = self._get_header(key)
@@ -104,6 +108,13 @@ class HeadersDict(object):
 
     def get(self, key, default=None):
         return self[key] if key in self else default
+
+    def get_all(self, key):
+        headers = []
+        for i in self:
+            if i.key == key:
+                headers.append(i)
+        return headers
 
 
 class RequestHeaders(DotDict):

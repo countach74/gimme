@@ -35,8 +35,8 @@ class App(object):
     def __call__(self, environ, start_response):
         return self.__wsgi.process(environ, start_response)
 
-    def listen(self, port=8080, host='127.0.0.1'):
-        server = HTTPServer(self, host, port)
+    def listen(self, port=8080, host='127.0.0.1', http_server=HTTPServer):
+        server = http_server(self, host, port)
         server.start()
         #server = make_server(host, port, self)
         #server.serve_forever()

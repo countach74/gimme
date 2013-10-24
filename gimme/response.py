@@ -1,6 +1,7 @@
 import time
 import datetime
 from .headers import ResponseHeaders
+from .headers import Header
 
 
 class Response(object):
@@ -28,7 +29,7 @@ class Response(object):
         307: 'Temporary Redirect',
         308: 'Permanent Redirect',
         400: 'Bad Request',
-        401: 'Unauthorized',
+        401: 'Not Authorized',
         402: 'Payment Required',
         403: 'Forbidden',
         404: 'Not Found',
@@ -100,7 +101,7 @@ class Response(object):
 
     @property
     def status_message(self):
-        return int(self._status.split(None, 1)[1])
+        return self._status.split(None, 1)[1]
 
     def _prepare(self, method):
         self.body = method()
@@ -133,13 +134,13 @@ class Response(object):
 
         if expires:
             if isinstance(expires, int):
-                date = datetime.datetime.fromutctimestamp(time.mktime(
-                    time.gmtime()))
+                date = datetime.datetime.utcfromtimestamp(time.mktime(
+                    time.gmtime(time.time() + expires)))
             elif isinstance(expires, datetime.datetime):
                 date = expires
             else:
                 date = datetime.datetime.utcnow()
-            cookie_string.append('Expires=%s' % date.stftime(
+            cookie_string.append('Expires=%s' % date.strftime(
                 '%a, %d %b %Y %H:%M:%S GMT'))
 
         if secure:
@@ -148,4 +149,4 @@ class Response(object):
         if http_only:
             cookie_string.append('HttpOnly')
 
-        self.set('Set-Cookie', '; '.join(cookie_string))
+        self.headers.add_header(Header('Set-Cookie', '; '.join(cookie_string)))
