@@ -11,6 +11,9 @@ class QueryString(object):
     def __repr__(self):
         return 'QueryString(%s)' % self._parsed
 
+    def __str__(self):
+        return self._query_string
+
     def __getattr__(self, key):
         if key not in QueryString._reserved_attrs:
             try:
@@ -28,7 +31,6 @@ class QueryString(object):
             self._parsed[key].append(value)
         else:
             return object.__setattr__(self, key, value)
-        return object.__setattr__(self, key, value)
 
     def __getitem__(self, key):
         try:
