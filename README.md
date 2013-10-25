@@ -3,7 +3,7 @@ Gimme
 
 An ExpressJS-like web framework for Python.
 
-Gimme's API is essentially a Pythonified version of Express's (although
+Gimme's API is essentially a Pythonified version of Express (although
 not asynchronous in nature). For example, a very simple application
 might look something like this:
 
