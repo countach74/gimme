@@ -57,6 +57,15 @@ class HeadersDict(object):
         for i in self._headers:
             yield i
 
+    def __eq__(self, other):
+        for i in xrange(len(self)):
+            try:
+                if self._headers[i] != other._headers[i]:
+                    return False
+            except IndexError:
+                return False
+        return True
+
     def _set_header(self, key, value):
         header = self._get_header(key)
         if not header:
@@ -100,8 +109,9 @@ class HeadersDict(object):
         return '\r\n'.join(map(str, self._headers)) + '\r\n\r\n'
 
     def copy(self):
-        copy = HeaderList()
+        copy = HeadersDict()
         copy._headers = list(self._headers)
+        return copy
 
     def clear(self):
         del(self._headers[:])
