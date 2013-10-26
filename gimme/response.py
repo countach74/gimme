@@ -104,7 +104,7 @@ class Response(object):
     def status_message(self):
         return self._status.split(None, 1)[1]
 
-    def render(self, middleware=None):
+    def _render(self, middleware=None):
         if not middleware:
             middleware = self.app._middleware + self.route.middleware
 
