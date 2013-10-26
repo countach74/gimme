@@ -92,7 +92,7 @@ class AcceptedList(object):
         return False
 
     def __repr__(self):
-        return str(self._data)
+        return '<AcceptedList()>'
 
 
 class Request(object):
@@ -111,7 +111,7 @@ class Request(object):
             if 'query_string' in self.headers else '')
 
         self.accepted = AcceptedList(self.headers.accept if 'accept' in
-            self.headers else None)
+            self.headers else '')
 
         self.cookies = self.headers.cookie if 'cookie' in self.headers else ''
 
