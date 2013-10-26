@@ -2,7 +2,7 @@ import abc
 import re
 import os
 import random
-from middleware import MultipartParser
+from multipart import MultipartParser
 from .dotdict import DotDict
 from .ext.session import MemoryStore, Session as _Session
 
