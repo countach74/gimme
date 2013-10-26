@@ -28,5 +28,6 @@ setup(
     author='Tim Radke',
     author_email='countach74@gmail.com',
     license='MIT',
-    test_suite='tests'
+    test_suite='tests',
+    install_requires=['jinja2', 'multipart']
 )
