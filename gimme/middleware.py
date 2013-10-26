@@ -32,6 +32,18 @@ class Middleware(object):
         pass
 
 
+def connection_helper(connection='close'):
+    class ConnectionHelper(Middleware):
+        def enter(self):
+            pass
+
+        def exit(self):
+            self.response.headers['Connection'] = connection
+            self.response.headers['Content-Length'] = str(len(self.response.body))
+
+    return ConnectionHelper
+
+
 def static(path, expose_as='/'):
     expose_as = (expose_as or os.path.basename(path)).strip('/')
     pattern = re.compile('^/%s.*' % re.escape(expose_as))

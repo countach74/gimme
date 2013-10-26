@@ -6,12 +6,13 @@ from .errors import TemplateError
 from .adapters.wsgi import WSGIAdapter
 from .servers.http import HTTPServer
 from .ext.engines import Jinja2Extension
+from .middleware import connection_helper
 
 
 class App(object):
     def __init__(self):
         self.routes = Routes(self)
-        self._middleware = []
+        self._middleware = [connection_helper()]
         self.__wsgi = WSGIAdapter(self)
         self.__render_engines = {}
         self.__env_config = {}
