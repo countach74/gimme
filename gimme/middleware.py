@@ -142,10 +142,8 @@ def json():
             if ('content_type' in self.request.headers and
                     self.request.headers.content_type == 'application/json'):
 
-                raw_body = self.request.raw_body
-
                 try:
-                    parsed_data = decode_json(raw_body)
+                    parsed_data = decode_json(self.request.raw_body)
                 except ValueError:
                     self.request.body = DotDict({})
                 else:

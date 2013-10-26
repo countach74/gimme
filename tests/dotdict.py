@@ -15,3 +15,11 @@ class DotDictTest(unittest.TestCase):
     def test_setattr(self):
         self.dd.set_test = 'data'
         assert self.dd.set_test == 'data'
+
+    def test_nested(self):
+        self.dd.nested_test = {
+            'some_key': {
+                'another_key': 'value'
+            }
+        }
+        assert self.dd.nested_test.some_key.another_key == 'value'

@@ -106,7 +106,9 @@ class Routes(object):
         for i in match_list:
             match = i.match(environ)
             if match:
-                return Request(self.app, environ, match), Response(self.app, i)
+                request = Request(self.app, environ, match)
+                response = Response(self.app, i, request)
+                return (request, response)
 
     def match(self, environ):
         request_methods = {
@@ -128,6 +130,6 @@ class Routes(object):
         if result:
             return result
 
-        result = Request(self.app, environ, None), Response(
-            self.app, self.http404)
-        return result
+        request = Request(self.app, environ, None)
+        response = Response(self.app, self.http404, response)
+        return (request, response)

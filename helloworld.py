@@ -7,8 +7,6 @@ app = gimme.App()
 
 class RootController(gimme.Controller):
   def index(self):
-    with open('/tmp/environ.pickle', 'w') as f:
-        pickle.dump(self.request.environ, f)
     return "Hello, world!"
 
   def set(self):

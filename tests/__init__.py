@@ -4,3 +4,4 @@ from . import response
 from . import headers
 from . import uri
 from . import dotdict
+from . import middleware

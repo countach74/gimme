@@ -14,6 +14,7 @@ def make_environ(method='GET', path_info='/', query_string=None, body=''):
         'HTTP_DNT': '1',
         'HTTP_HOST': 'localhost:8080',
         'HTTP_USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36',
+        'HTTP_CONTENT_LENGTH': len(body),
         'PATH_INFO': path_info,
         'PATH_TRANSLATED': '/path/to//',
         'QUERY_STRING': query_string or '',

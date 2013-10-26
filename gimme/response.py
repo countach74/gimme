@@ -1,7 +1,7 @@
 import time
 import datetime
-from .headers import ResponseHeaders
-from .headers import Header
+import contextlib
+from .headers import ResponseHeaders, Header
 
 
 class Response(object):
@@ -74,9 +74,10 @@ class Response(object):
         522: 'Connection Timed Out'
     }
 
-    def __init__(self, app, route):
+    def __init__(self, app, route, request):
         self.app = app
         self.route = route
+        self.request = request
         self._status = '200 OK'
 
         try:
@@ -103,8 +104,18 @@ class Response(object):
     def status_message(self):
         return self._status.split(None, 1)[1]
 
-    def _prepare(self, method):
-        self.body = method()
+    def render(self, middleware=None):
+        if not middleware:
+            middleware = self.app._middleware + self.route.middleware
+
+        instantiated_middleware = map(
+            lambda x: x(self.app, self.request, self), middleware)
+
+        controller = self._controller_class(self.app, self.request, self)
+        method = getattr(controller, self._method_name)
+
+        with contextlib.nested(*instantiated_middleware):
+            self.body = method()
 
     def set(self, key, value):
         self.headers[key] = value

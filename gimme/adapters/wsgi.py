@@ -17,22 +17,12 @@ class WSGIAdapter(object):
 
     def process(self, environ, start_response):
         request, response = self.app.routes.match(environ)
-        controller = response._controller_class(self.app, request, response)
-        method = getattr(controller, response._method_name)
-
-        all_middleware = self._get_middleware(request, response)
 
         try:
-            with contextlib.nested(*all_middleware):
-                response._prepare(method)
+            response.render()
         except Exception, e:
-            err_response = Response(self.app, self.app.routes.http500)
-            err_controller = ErrorController(self.app, request, err_response)
-
-            with contextlib.nested(
-                    *self._get_app_middleware(request, response)):
-                err_response._prepare(err_controller.http500)
-
+            err_response = Response(self.app, self.app.routes.http500, request)
+            err_response.render()
             start_response(err_response._status, err_response.headers.items())
             yield str(err_response.body)
         else:
