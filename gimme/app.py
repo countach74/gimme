@@ -12,7 +12,7 @@ from .middleware import connection_helper
 class App(object):
     def __init__(self):
         self.routes = Routes(self)
-        self._middleware = [connection_helper()]
+        self._middleware = []
         self.__wsgi = WSGIAdapter(self)
         self.__render_engines = {}
         self.__env_config = {}
