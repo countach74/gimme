@@ -14,7 +14,15 @@ setup(
   ],
   package_data={
     'gimme': [
-      'templates/errors/*.html'
+      'templates/errors/*.html',
+      'templates/generator/*.py',
+      'templates/generator/controllers/*.py',
+      'templates/generator/public/*.*',
+      'templates/generator/public/images/*.*',
+      'templates/generator/public/scripts/*.*',
+      'templates/generator/public/styles/*.*',
+      'templates/generator/views/*.*',
+      'templates/generator/views/root/*.*'
     ]
   },
   author='Tim Radke',
