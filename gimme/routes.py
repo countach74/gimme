@@ -131,5 +131,5 @@ class Routes(object):
             return result
 
         request = Request(self.app, environ, None)
-        response = Response(self.app, self.http404, response)
+        response = Response(self.app, self.http404, request)
         return (request, response)
