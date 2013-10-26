@@ -32,7 +32,7 @@ class Middleware(object):
         pass
 
 
-def static(path, expose_as=None):
+def static(path, expose_as='/'):
     expose_as = (expose_as or os.path.basename(path)).strip('/')
     pattern = re.compile('^/%s.*' % re.escape(expose_as))
 
