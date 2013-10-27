@@ -14,6 +14,7 @@ class ResponseTest(unittest.TestCase):
         self.environ['HTTP_CONTENT_TYPE'] = 'application/json'
         self.environ['HTTP_CONTENT_LENGTH'] = str(len(body))
         self.environ['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest'
+        self.environ['HTTP_COOKIE'] = 'cookie_test=some_cookie_to_delete'
         
         class TestController(gimme.Controller):
             def endpoint1(self):
@@ -45,7 +46,35 @@ class ResponseTest(unittest.TestCase):
             domain='something.test.com', expires=360000)
         # Add assert to test cookie
 
+    def test_clear_cookie(self):
+        self.response.clear_cookie('cookie_test')
+        assert self.response.headers['Set-Cookie'] == (
+            'cookie_test=deleted; Path=/; Expires=Wed, 31 Dec 1969 16:00:00 GMT')
+
     def test_status(self):
         self.response.status(401)
         assert self.response.status_code == 401
         assert self.response.status_message == 'Not Authorized'
+
+    def test_attachment(self):
+        self.response.attachment()
+        assert self.response.headers['Content-Disposition'] == 'attachment'
+        self.response.attachment('file.jpg')
+        assert self.response.headers['Content-Disposition'] == ('attachment; '
+            'filename="file.jpg"')
+        assert self.response.headers['Content-Type'] == 'image/jpeg'
+
+    def test_charset(self):
+        self.response.charset = 'UTF-8'
+        assert self.response.charset == 'UTF-8'
+        self.response.charset = 'ASCII'
+        assert self.response.charset == 'ASCII'
+
+    def test_links(self):
+        self.response.links({
+            'next': 'http://google.com',
+            'prev': 'http://apple.com'
+        })
+        assert self.response.headers['Link'] == (
+            '<http://apple.com>; rel="prev", '
+            '<http://google.com>; rel="next"')

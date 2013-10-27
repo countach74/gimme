@@ -1,10 +1,14 @@
 import time
 import datetime
 import contextlib
+import mimetypes
+import re
+from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 
 
 class Response(object):
+    _charset_pattern = re.compile('(.*?); charset=(.*)$')
     _status_code_map = {
         100: 'Continue',
         101: 'Switching Protocols',
@@ -74,6 +78,8 @@ class Response(object):
         522: 'Connection Timed Out'
     }
 
+    mimetypes.init()
+
     def __init__(self, app, route, request):
         self.app = app
         self.route = route
@@ -88,6 +94,9 @@ class Response(object):
         self._controller_class = route.method.im_class
         self._method_name = route.method.__name__
         self.body = ''
+
+        # Storage for request-specific local data
+        self.locals = DotDict()
 
     def status(self, status):
         if isinstance(status, int):
@@ -161,3 +170,48 @@ class Response(object):
             cookie_string.append('HttpOnly')
 
         self.headers.add_header(Header('Set-Cookie', '; '.join(cookie_string)))
+
+    def clear_cookie(self, key):
+        expires = datetime.datetime.fromtimestamp(0)
+        self.cookie(key, 'deleted', expires=expires)
+
+    def attachment(self, filename=None):
+        if filename:
+            self.headers['Content-Disposition'] = ('attachment; filename="%s"'
+                % filename)
+            mimetype, encoding = mimetypes.guess_type(filename)
+            if mimetype:
+                self.type(mimetype)
+        else:
+            self.headers['Content-Disposition'] = 'attachment';
+
+    @property
+    def charset(self):
+        if 'Content-Type' in self.headers:
+            header = self.headers['Content-Type']
+            match = self._charset_pattern.match(header.value)
+            if match:
+                return match.group(2)
+        return None
+
+    @charset.setter
+    def charset(self, value):
+        if 'Content-Type' in self.headers:
+            header = self.headers['Content-Type']
+        else:
+            header = Header('Content-Type', 'text/html')
+            self.headers.add_header(header)
+
+        match = self._charset_pattern.match(header.value)
+        if match:
+            header.value = '%s; charset=%s' % (
+                match.group(1), value)
+        else:
+            header.value = '%s; charset=%s' % (
+                header.value, value)
+
+    def links(self, links):
+        buffer_ = []
+        for k, v in links.iteritems():
+            buffer_.append('<%s>; rel="%s"' % (v, k))
+        self.headers['Link'] = ', '.join(buffer_)
