@@ -69,10 +69,6 @@ app.routes.post('/form', FormController.create)
 
 app.routes.get('*', RootController.not_found)
 
-app.set('default headers', {
-  'Content-Type': 'text/html'
-})
-
 
 app.use(gimme.middleware.compress())
 app.use(gimme.middleware.static('public'))

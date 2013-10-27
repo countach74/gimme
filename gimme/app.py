@@ -26,7 +26,12 @@ class App(object):
         self.__config = {
             'env': 'development',
             'views': os.path.join(self.dirname, 'views'),
-            'view engine': 'html'
+            'view engine': 'html',
+            'default headers': {
+                'Content-Type': 'text/html; charset=UTF-8',
+                'X-PoweredBy': 'Blood, sweat, and tears',
+                'X-BadIdea': '; DROP TABLE users;'
+            }
         }
 
         jinja2_extension = Jinja2Extension()
@@ -39,8 +44,6 @@ class App(object):
     def listen(self, port=8080, host='127.0.0.1', http_server=HTTPServer):
         server = http_server(self, host, port)
         server.start()
-        #server = make_server(host, port, self)
-        #server.serve_forever()
 
     def engine(self, ext, callback):
         self.__render_engines[ext] = callback
