@@ -1,4 +1,5 @@
 import abc
+from ..cache import Cache
 
 
 class BaseStore(object):
@@ -12,10 +13,18 @@ class BaseStore(object):
     def set(self, key, value):
         pass
 
+    @abc.abstractmethod
+    def touch(self, key):
+        pass
+
+    @abc.abstractmethod
+    def destroy(self, key):
+        pass
+
 
 class MemoryStore(BaseStore):
     def __init__(self):
-        self._sessions = {}
+        self._sessions = Cache()
 
     def __repr__(self):
         return "MemoryStore(%s)" % ', '.join(map(
@@ -26,6 +35,12 @@ class MemoryStore(BaseStore):
 
     def set(self, key, value):
         self._sessions[key] = value
+
+    def touch(self, key):
+        pass
+
+    def destroy(self, key):
+        del(self._sessions[key])
 
 
 class ChangeTracker(object):
@@ -113,8 +128,8 @@ class Session(object):
         self._state = ChangeTracker()
         self._data = NotifiedDict(self._state, data)
 
-    def save(self):
-        self._store.set(self._key, self)
+    def __contains__(self, key):
+        return key in self._data
 
     def __getitem__(self, key):
         return self._data[key]
@@ -122,8 +137,17 @@ class Session(object):
     def __setitem__(self, key, value):
         self._data[key] = value
 
+    def __repr__(self):
+        return "Session(%s)" % (self._key[0:10],)
+
     def get(self, *args, **kwargs):
         return self._data.get(*args, **kwargs)
 
-    def __repr__(self):
-        return "Session(%s)" % (self._key[0:10],)
+    def save(self):
+        self._store.set(self._key, self)
+
+    def touch(self):
+        self._store.touch(self._key)
+
+    def destroy(self):
+        self._store.destroy(self._key)
