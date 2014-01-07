@@ -153,7 +153,7 @@ def json():
     class Json(Middleware):
         def enter(self):
             if ('content_type' in self.request.headers and
-                    self.request.headers.content_type == 'application/json'):
+                    self.request.headers.content_type.startswith('application/json')):
 
                 try:
                     parsed_data = decode_json(self.request.raw_body)
@@ -161,8 +161,6 @@ def json():
                     self.request.body = DotDict({})
                 else:
                     self.request.body = DotDict(parsed_data)
-            else:
-                self.request.body = DotDict({})
 
         def exit(self):
             pass
@@ -175,12 +173,9 @@ def urlencoded(use_as_fallback=True):
 
     class UrlEncoded(Middleware):
         def enter(self):
-            self.request.body = DotDict({})
-
             if (('content_type' in self.request.headers and
-                    self.request.headers.content_type ==
-                    'application/x-www-form-urlencoded')
-                    or use_as_fallback):
+                    self.request.headers.content_type.startswith(
+                    'application/x-www-form-urlencoded'))):
 
                 self.request.body = QueryString(self.request.raw_body)
 
@@ -195,8 +190,6 @@ def multipart():
 
     class Multipart(Middleware):
         def enter(self):
-            self.request.body = DotDict({})
-
             if ('content_type' in self.request.headers and
                     'request_method' in self.request.headers and
                     self.request.headers.request_method in ('PUT', 'POST')):

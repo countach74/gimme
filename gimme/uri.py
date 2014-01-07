@@ -12,7 +12,7 @@ class QueryString(object):
         return 'QueryString(%s)' % self._parsed
 
     def __str__(self):
-        return self._query_string
+        return self.__repr__()
 
     def __getattr__(self, key):
         if key not in QueryString._reserved_attrs:
