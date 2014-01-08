@@ -27,7 +27,7 @@ setup(
     },
     entry_points = {
       'console_scripts': [
-        'gimme2 = gimme.generator:main'
+        'gimme = gimme.generator:main'
       ],
       'dogpile.cache': [
         'gimme.cache.memory = gimme.cache:Memory',
