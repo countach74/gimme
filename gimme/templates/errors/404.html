@@ -1,5 +1,10 @@
-<h1>404 File Not Found</h1>
+{% extends 'errors/base.html' %}
 
-<p>
-  The humanity!
-</p>
+{% block title %}404 File Not Found {% endblock %}
+
+{% block body %}
+    <h1>404 File Not Found</h1>
+    <p>
+      More than likely, you are here by accident.
+    </p>
+{% endblock %}

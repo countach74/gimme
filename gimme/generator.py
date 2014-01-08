@@ -1,6 +1,6 @@
 import argparse
 import os
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, ChoiceLoader, PackageLoader
 
 
 def get_args():
@@ -48,7 +48,10 @@ def main():
     check_dir(config)
     gimme_path = os.path.abspath(os.path.dirname(__file__))
     templates_path = os.path.join(gimme_path, 'templates/generator')
-    env = Environment(loader=FileSystemLoader(templates_path))
+    env = Environment(loader=ChoiceLoader([
+        FileSystemLoader(templates_path),
+        PackageLoader('gimme', 'templates')
+    ]))
     files = {}
     make_dir(config)
 

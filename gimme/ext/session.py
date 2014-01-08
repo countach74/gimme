@@ -106,7 +106,7 @@ class Session(object):
         self._cache.set(self._key, dict(self._data))
 
     def touch(self):
-        self._cache.touch(self._key)
+        self._cache.save()
 
     def destroy(self):
-        self._cache.destroy(self._key)
+        self._cache.delete(self._key)

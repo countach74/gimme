@@ -1,11 +1,18 @@
-<h1>500 Internal Server Error</h1>
+{% extends 'errors/base.html' %}
 
-<p>
-  Oh snap! Something's borked. :(
-</p>
+{% block title %}500 Internal Server Error{% endblock %}
 
-<pre>
-{% for line in traceback -%}
-{{line}}
-{%- endfor %}
-</pre>
+
+{% block body %}
+    <h1>500 Internal Server Error</h1>
+
+    <p>
+      Oh snap! Something's borked. :(
+    </p>
+
+    <pre>
+    {% for line in traceback -%}
+    {{line}}
+    {%- endfor %}
+    </pre>
+{% endblock %}
