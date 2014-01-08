@@ -36,7 +36,8 @@ setup(
     },
     author='Tim Radke',
     author_email='countach74@gmail.com',
+    download_url='https://github.com/countach74/gimme/tarball/master',
     license='MIT',
     test_suite='tests',
-    install_requires=['jinja2', 'multipart', 'dogpile.cache']
+    install_requires=['jinja2', 'multipart', 'dogpile.cache'],
 )
