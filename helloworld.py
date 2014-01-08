@@ -27,6 +27,10 @@ class RootController(gimme.Controller):
   def test(self):
     return {}
 
+  def handle_api(self):
+    print self.request.params
+    return 'oh cool, everything goes here'
+
 
 app.routes.get('/test', RootController.test)
 
@@ -34,6 +38,7 @@ app.routes.get('/', RootController.index)
 app.routes.get('/get', RootController.get)
 app.routes.get('/set', RootController.set)
 app.routes.get('/error', RootController.make_error)
+app.routes.get('/api/(?P<gibberish>.*?)/:user', RootController.handle_api)
 
 app.use(gimme.middleware.compress())
 app.use(gimme.middleware.static('public'))
