@@ -27,7 +27,8 @@ setup(
     },
     entry_points = {
       'dogpile.cache': [
-        'gimme.cache.memory = gimme.cache:Memory'
+        'gimme.cache.memory = gimme.cache:Memory',
+        'gimme.cache.file = gimme.cache:File'
       ]
     },
     author='Tim Radke',

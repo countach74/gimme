@@ -2,48 +2,6 @@ import abc
 from dogpile.cache import make_region
 
 
-class BaseStore(object):
-    __metaclass__ = abc.ABCMeta
-
-    @abc.abstractmethod
-    def get(self, key):
-        pass
-
-    @abc.abstractmethod
-    def set(self, key, value):
-        pass
-
-    @abc.abstractmethod
-    def touch(self, key):
-        pass
-
-    @abc.abstractmethod
-    def destroy(self, key):
-        pass
-
-
-class MemoryStore(BaseStore):
-    def __init__(self):
-        self._sessions = make_region().configure('gimme.cache.memory',
-          expiration_time=3600)
-
-    def __repr__(self):
-        return "MemoryStore(%s)" % ', '.join(map(
-            repr, self._sessions.values()))
-
-    def get(self, key):
-        return self._sessions[key]
-
-    def set(self, key, value):
-        self._sessions[key] = value
-
-    def touch(self, key):
-        pass
-
-    def destroy(self, key):
-        del(self._sessions[key])
-
-
 class ChangeTracker(object):
     def __init__(self):
         self._dirty = False

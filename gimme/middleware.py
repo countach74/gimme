@@ -7,7 +7,7 @@ from dogpile.cache import make_region
 from dogpile.cache.api import NO_VALUE
 from multipart import MultipartParser
 from .dotdict import DotDict
-from .ext.session import MemoryStore, Session as _Session
+from .ext.session import Session as _Session
 
 
 class Middleware(object):

@@ -91,7 +91,7 @@ app.use(gimme.middleware.compress())
 app.use(gimme.middleware.static('public'))
 app.use(gimme.middleware.method_override())
 app.use(gimme.middleware.cookie_parser())
-app.use(gimme.middleware.session())
+app.use(gimme.middleware.session('gimme.cache.file'))
 app.use(gimme.middleware.body_parser())
 
 
