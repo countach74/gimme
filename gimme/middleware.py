@@ -2,6 +2,9 @@ import abc
 import re
 import os
 import random
+import uuid
+from dogpile.cache import make_region
+from dogpile.cache.api import NO_VALUE
 from multipart import MultipartParser
 from .dotdict import DotDict
 from .ext.session import MemoryStore, Session as _Session
@@ -110,8 +113,11 @@ def cookie_parser():
     return CookieParser
 
 
-def session(store=MemoryStore, session_key='gimme_session'):
-    storage = store()
+def session(cache='gimme.cache.memory', session_cookie='gimme_session',
+        make_session_key=uuid.uuid4, expiration_time=3600, **kwargs):
+
+    region = make_region().configure(cache, expiration_time=expiration_time,
+        **kwargs)
 
     class Session(Middleware):
         def enter(self):
@@ -124,25 +130,23 @@ def session(store=MemoryStore, session_key='gimme_session'):
 
         def _load_session(self):
             try:
-                key = self.request.cookies[session_key]
+                key = self.request.cookies[session_cookie]
             except KeyError:
                 return self._create_session()
 
-            try:
-                return storage.get(key)
-            except KeyError, e:
+            session_data = region.get(key)
+
+            if session_data != NO_VALUE:
+                return _Session(region, key, session_data)
+            else:
                 return self._create_session()
 
         def _create_session(self):
             self._new_session = True
-            key = self._make_session_key()
-            self.response.set('Set-Cookie', '%s=%s' % (session_key, key))
-            new_session = _Session(storage, key, {})
-            storage.set(key, new_session)
+            key = str(make_session_key())
+            self.response.set('Set-Cookie', '%s=%s' % (session_cookie, key))
+            new_session = _Session(region, key, {})
             return new_session
-
-        def _make_session_key(self, num_bits=256):
-            return '%02x' % random.getrandbits(num_bits)
 
     return Session
 

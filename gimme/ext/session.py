@@ -1,5 +1,5 @@
 import abc
-from ..cache import Cache
+from dogpile.cache import make_region
 
 
 class BaseStore(object):
@@ -24,7 +24,8 @@ class BaseStore(object):
 
 class MemoryStore(BaseStore):
     def __init__(self):
-        self._sessions = Cache()
+        self._sessions = make_region().configure('gimme.cache.memory',
+          expiration_time=3600)
 
     def __repr__(self):
         return "MemoryStore(%s)" % ', '.join(map(
@@ -122,8 +123,8 @@ class NotifiedList(list, NotifiedMixin):
 
 
 class Session(object):
-    def __init__(self, store, key, data={}):
-        self._store = store
+    def __init__(self, cache, key, data={}):
+        self._cache = cache
         self._key = key
         self._state = ChangeTracker()
         self._data = NotifiedDict(self._state, data)
@@ -138,16 +139,16 @@ class Session(object):
         self._data[key] = value
 
     def __repr__(self):
-        return "Session(%s)" % (self._key[0:10],)
+        return "Session(%s)" % (self._key)
 
     def get(self, *args, **kwargs):
         return self._data.get(*args, **kwargs)
 
     def save(self):
-        self._store.set(self._key, self)
+        self._cache.set(self._key, dict(self._data))
 
     def touch(self):
-        self._store.touch(self._key)
+        self._cache.touch(self._key)
 
     def destroy(self):
-        self._store.destroy(self._key)
+        self._cache.destroy(self._key)

@@ -23,6 +23,21 @@ class RootController(gimme.Controller):
     self.response.status(404)
     return "That can't be good!"
 
+  @gimme.view('root/test.html')
+  def test(self):
+    return 'oh cool'
+
+  def test_html(self):
+    return 'zomg'
+
+  @gimme.view('root/index.html')
+  def test_json(self):
+    return {'this': 'that'}
+
+  test.format('text/html', test_html)
+  test.format('application/json', test_json)
+  print test_json
+
 
 class FormController(gimme.Controller):
   records = []
@@ -56,6 +71,8 @@ class FormController(gimme.Controller):
     self.records.append(record)
     return {'record': record}
 
+
+app.routes.get('/test', RootController.test)
 
 app.routes.get('/', RootController.index)
 app.routes.get('/get', RootController.get)

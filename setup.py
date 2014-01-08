@@ -25,9 +25,14 @@ setup(
             'templates/generator/views/root/*.*'
         ]
     },
+    entry_points = {
+      'dogpile.cache': [
+        'gimme.cache.memory = gimme.cache:Memory'
+      ]
+    },
     author='Tim Radke',
     author_email='countach74@gmail.com',
     license='MIT',
     test_suite='tests',
-    install_requires=['jinja2', 'multipart']
+    install_requires=['jinja2', 'multipart', 'dogpile.cache']
 )
