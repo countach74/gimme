@@ -23,20 +23,18 @@ class RootController(gimme.Controller):
     self.response.status(404)
     return "That can't be good!"
 
-  @gimme.view('root/test.html')
+  @gimme.view()
   def test(self):
-    return 'oh cool'
+    return 'this is text'
 
+  @test.add_format('text/html')
+  @gimme.view('test.html')
   def test_html(self):
-    return 'zomg'
+    return 'oh swell'
 
   @gimme.view('root/index.html')
   def test_json(self):
     return {'this': 'that'}
-
-  test.format('text/html', test_html)
-  test.format('application/json', test_json)
-  print test_json
 
 
 class FormController(gimme.Controller):
