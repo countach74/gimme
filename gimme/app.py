@@ -12,9 +12,10 @@ from .middleware import connection_helper
 class App(object):
     def __init__(self):
         self.routes = Routes(self)
+        self.engines = {}
+
         self._middleware = []
         self.__wsgi = WSGIAdapter(self)
-        self.__render_engines = {}
         self.__env_config = {}
 
         self.dirname = os.path.dirname(os.path.abspath(sys.argv[0]))
@@ -45,14 +46,14 @@ class App(object):
         server = http_server(self, host, port)
         server.start()
 
-    def engine(self, ext, callback):
-        self.__render_engines[ext] = callback
+    def engine(self, ext, engine):
+        self.engines[ext] = engine
 
     def render(self, template, params):
         junk, ext = os.path.splitext(template)
         ext = ext[1:]
-        if ext in self.__render_engines:
-            return self.__render_engines[ext](template, params)
+        if ext in self.engines:
+            return self.engines[ext](template, params)
         else:
             raise TemplateError("Could not locate an engine for that "
                 "extension (%s)" % template)

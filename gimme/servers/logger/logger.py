@@ -37,7 +37,7 @@ class BaseLogger(object):
 
 class SysLogger(BaseLogger):
     def __init__(self, ident='gimme'):
-        syslog.openlog(ident)
+        syslog.openlog(ident, syslog.LOG_PID | syslog.LOG_PERROR)
 
     def _log_message(self, level, message):
         syslog.syslog(level, message)
