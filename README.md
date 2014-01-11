@@ -24,17 +24,23 @@ class RootController(gimme.Controller):
     return {'some data': 'hello, world!'}
     
     
-# Middleware is implemented via Python context managers; simply
-# subclass the Middleware class and implement enter() and exit()
-# methods.
-class CustomMiddleware(gimme.middleware.Middleware):
-  def enter(self):
-    # Like controllers, middleware has access to request, response
-    # and app objects via self.request, self.response and self.app.
-    pass
+# Middleware is implemented exactly as it is in Express, although
+# because of the differences between Python and JavaScript,
+# if you need to pass parameters to middleware upon initialization,
+# you should probably create a class (with __call__() method)
+# instead of a standard function.
+def custom_middleware(request, response, next_):
+  request.some_property = {'databases': 'are useful'}
+  next_()
+  
+# Or, as a class:
+class CustomMiddleware(object):
+  def __init__(self, param1):
+    self.param1 = param1
     
-  def exit(self):
-    pass
+  def __call__(self, request, response, next_):
+    request.some_property = {'something': self.param1}
+    next_()
       
 
 app = gimme.App()
@@ -49,7 +55,7 @@ app.use(gimme.middleware.body_parser())
 app.get('/', RootController.index)
 
 # Apply CustomMiddleware to a specific route
-app.get('/route_middleware', CustomMiddleware, RootController.index)
+app.get('/route_middleware', custom_middleware, RootController.index)
 
 app.set('default headers', {
   'Content-Type': 'text/html'
