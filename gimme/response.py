@@ -1,10 +1,13 @@
+import traceback
 import time
 import datetime
 import contextlib
 import mimetypes
 import re
+import sys
 from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
+from .controller import ErrorController
 
 
 class Response(object):
@@ -113,18 +116,31 @@ class Response(object):
     def status_message(self):
         return self._status.split(None, 1)[1]
 
+    def _make_next(self, i, fn, method, next_fns):
+        if fn is method:
+            def next_():
+                self.body = fn()
+        else:
+            def next_():
+                fn(self.request, self, next_fns[i-1])
+        return next_
+
     def _render(self, middleware=None):
-        if not middleware:
-            middleware = self.app._middleware + self.route.middleware
-
-        instantiated_middleware = map(
-            lambda x: x(self.app, self.request, self), middleware)
-
         controller = self._controller_class(self.app, self.request, self)
         method = getattr(controller, self._method_name)
 
-        with contextlib.nested(*instantiated_middleware):
-            self.body = method()
+        if middleware is None:
+            middleware = (self.app._middleware + self.route.middleware
+                + [method])
+        elif not middleware:
+            middleware = [method]
+
+        next_fns = []
+
+        for i, fn in enumerate(list(reversed(middleware))):
+            next_fns.append(self._make_next(i, fn, method, next_fns))
+
+        next_fns[-1]()
 
     def set(self, key, value):
         self.headers[key] = value

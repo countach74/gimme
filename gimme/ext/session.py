@@ -81,11 +81,14 @@ class NotifiedList(list, NotifiedMixin):
 
 
 class Session(object):
-    def __init__(self, cache, key, data={}):
+    def __init__(self, cache, key, data={}, new=False):
         self._cache = cache
         self._key = key
         self._state = ChangeTracker()
         self._data = NotifiedDict(self._state, data)
+
+        if new:
+            self._state.dirty()
 
     def __contains__(self, key):
         return key in self._data

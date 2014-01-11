@@ -5,12 +5,14 @@ from .routes import Routes
 from .errors import TemplateError
 from .adapters.wsgi import WSGIAdapter
 from .servers.http import HTTPServer
+from .servers.logger import SysLogger
 from .ext.engines import Jinja2Extension
 from .middleware import connection_helper
 
 
 class App(object):
-    def __init__(self):
+    def __init__(self, name='gimme', logger=SysLogger):
+        self.logger = logger(name)
         self.routes = Routes(self)
         self.engines = {}
 

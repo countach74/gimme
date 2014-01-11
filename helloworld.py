@@ -7,6 +7,7 @@ app = gimme.App()
 
 class RootController(gimme.Controller):
   def index(self):
+    print self.request.body
     return "Hello, world!"
 
   def set(self):
@@ -34,7 +35,7 @@ class RootController(gimme.Controller):
 
 app.routes.get('/test', RootController.test)
 
-app.routes.get('/', RootController.index)
+app.routes.all('/', RootController.index)
 app.routes.get('/get', RootController.get)
 app.routes.get('/set', RootController.set)
 app.routes.get('/error', RootController.make_error)

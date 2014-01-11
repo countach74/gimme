@@ -34,6 +34,19 @@ class BaseLogger(object):
     def log_alert(self, message):
         self._log_message(syslog.LOG_ALERT, message)
 
+    # Some aliases
+    info = log_info
+    warn = log_warn
+    log_warning = log_warn
+    warning = log_warning
+    crit = log_crit
+    log_critical = log_crit
+    critical = log_critical
+    notice = log_notice
+    error = log_error
+    emergency = log_emergency
+    alert = log_alert
+
 
 class SysLogger(BaseLogger):
     def __init__(self, ident='gimme'):

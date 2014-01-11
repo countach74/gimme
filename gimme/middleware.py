@@ -3,6 +3,7 @@ import re
 import os
 import random
 import uuid
+import json as jsonlib
 from dogpile.cache import make_region
 from dogpile.cache.api import NO_VALUE
 from multipart import MultipartParser
@@ -10,287 +11,235 @@ from .dotdict import DotDict
 from .ext.session import Session as _Session
 
 
-class Middleware(object):
-    __metaclass__ = abc.ABCMeta
+class connection_helper(object):
+    def __init__(self, connection='close'):
+        self.connection = connection
 
-    def __init__(self, app, request, response):
-        self.app = app
-        self.request = request
-        self.response = response
-
-    def __enter__(self):
-        self.enter()
-
-    def __exit__(self, exc_type, exc_value, traceback):
-        self.exc_type = exc_type
-        self.exc_value = exc_value
-        self.traceback = traceback
-        self.exit()
-
-    @abc.abstractmethod
-    def enter(self):
-        pass
-
-    @abc.abstractmethod
-    def exit(self):
-        pass
+    def __call__(self, request, response, next_):
+        next_()
+        response.headers['Connection'] = self.connection
+        response.headers['Content-Length'] = str(len(response.body))
 
 
-def connection_helper(connection='close'):
-    class ConnectionHelper(Middleware):
-        def enter(self):
-            pass
+class static(object):
+    def __init__(self, path, expose_as='/'):
+        self.path = path
+        self.expose_as = (expose_as or os.path.basename(path)).strip('/')
+        self.pattern = re.compile('^/%s.*' % re.escape(self.expose_as))
 
-        def exit(self):
-            self.response.headers['Connection'] = connection
-            self.response.headers['Content-Length'] = str(len(self.response.body))
+        self.mimetypes = __import__('mimetypes')
+        self.mimetypes.init()
 
-    return ConnectionHelper
+    def __call__(self, request, response, next_):
+        match = self.pattern.match(request.headers.path_info)
+        local_path = None
 
-
-def static(path, expose_as='/'):
-    expose_as = (expose_as or os.path.basename(path)).strip('/')
-    pattern = re.compile('^/%s.*' % re.escape(expose_as))
-
-    import mimetypes
-    mimetypes.init()
-
-    class Static(Middleware):
-        def enter(self):
-            match = pattern.match(self.request.headers.path_info)
-            self._file = None
-            self._local_path = None
-
-            if match:
-                self._local_path = self._get_local_path(
-                    self.request.headers.path_info)
-                if self._local_path:
-                    self.response.set('Content-Type', mimetypes.guess_type(
-                        self._local_path)[0])
-
-        def exit(self):
-            if self._local_path:
-                self.response.status(200)
+        if match:
+            local_path = self._get_local_path(
+                request.headers.path_info)
+            if local_path:
+                response.set('Content-Type', self.mimetypes.guess_type(
+                    local_path)[0])
+                response.status(200)
                 try:
-                    with open(self._local_path, 'r') as f:
-                        self._serve(f)
+                    with open(local_path, 'r') as f:
+                        response.body = f.read()
                 except OSError, e:
                     pass
-
-        def _serve(self, f):
-            self.response.body = f.read()
-
-        def _get_local_path(self, local_path):
-            local_path = local_path.strip('/')[len(expose_as):].lstrip('/')
-            temp_path = os.path.join(path, local_path)
-            if temp_path.startswith(path) and os.path.isfile(temp_path):
-                return temp_path
             else:
-                return None
+                next_()
+        else:
+            next_()
 
-    return Static
+    def _get_local_path(self, local_path):
+        local_path = local_path.strip('/')[len(self.expose_as):].lstrip('/')
+        temp_path = os.path.join(self.path, local_path)
+        if temp_path.startswith(self.path) and os.path.isfile(temp_path):
+            return temp_path
+        else:
+            return None
 
 
-def cookie_parser():
-    class CookieParser(Middleware):
-        def enter(self):
+class cookie_parser(object):
+    def __call__(self, request, response, next_):
+        try:
+            data = request.cookies.split('; ')
+        except AttributeError:
+            request.cookies = DotDict()
+            return
+
+        request.cookies = DotDict()
+        for i in data:
+            if i:
+                split = i.split('=', 1)
+                if split:
+                    request.cookies[split[0]] = split[1]
+
+        next_()
+
+
+class session(object):
+    def __init__(self, cache='gimme.cache.memory', session_cookie='gimme_session',
+            make_session_key=uuid.uuid4, expiration_time=3600, **kwargs):
+
+        self.cache = cache
+        self.session_cookie = session_cookie
+        self.make_session_key = make_session_key
+        self.expiration_time = expiration_time
+
+        self.region = make_region().configure(cache,
+            expiration_time=expiration_time, **kwargs)
+
+    def __call__(self, request, response, next_):
+        request.session = self._load_session(request, response)
+
+        next_()
+
+        if request.session._state.is_dirty():
+            request.session.save()
+
+    def _load_session(self, request, response):
+        try:
+            key = request.cookies[self.session_cookie]
+        except KeyError:
+            return self._create_session(response)
+
+        session_data = self.region.get(key)
+
+        if session_data != NO_VALUE:
+            return _Session(self.region, key, session_data)
+        else:
+            return self._create_session(response)
+
+    def _create_session(self, response):
+        key = str(self.make_session_key())
+        response.set('Set-Cookie', '%s=%s' % (self.session_cookie, key))
+        new_session = _Session(self.region, key, {}, True)
+        return new_session
+
+
+class json(object):
+    def __call__(self, request, response, next_):
+        if ('content_type' in request.headers and
+                request.headers.content_type.startswith('application/json')):
+
             try:
-                data = self.request.cookies.split('; ')
-            except AttributeError:
-                self.request.cookies = DotDict()
-                return
-
-            self.request.cookies = DotDict()
-            for i in data:
-                if i:
-                    split = i.split('=', 1)
-                    if split:
-                        self.request.cookies[split[0]] = split[1]
-
-        def exit(self):
-            pass
-
-    return CookieParser
-
-
-def session(cache='gimme.cache.memory', session_cookie='gimme_session',
-        make_session_key=uuid.uuid4, expiration_time=3600, **kwargs):
-
-    region = make_region().configure(cache, expiration_time=expiration_time,
-        **kwargs)
-
-    class Session(Middleware):
-        def enter(self):
-            self._new_session = False
-            self.request.session = self._load_session()
-
-        def exit(self):
-            if self.request.session._state.is_dirty() or self._new_session:
-                self.request.session.save()
-
-        def _load_session(self):
-            try:
-                key = self.request.cookies[session_cookie]
-            except KeyError:
-                return self._create_session()
-
-            session_data = region.get(key)
-
-            if session_data != NO_VALUE:
-                return _Session(region, key, session_data)
+                parsed_data = jsonlib.loads(request.raw_body)
+            except ValueError:
+                request.body = DotDict({})
             else:
-                return self._create_session()
+                request.body = DotDict(parsed_data)
 
-        def _create_session(self):
-            self._new_session = True
-            key = str(make_session_key())
-            self.response.set('Set-Cookie', '%s=%s' % (session_cookie, key))
-            new_session = _Session(region, key, {})
-            return new_session
+        elif not hasattr(request, 'body'):
+            request.body = {}
 
-    return Session
+        next_()
 
 
-def json():
-    from json import loads as decode_json
-
-    class Json(Middleware):
-        def enter(self):
-            if ('content_type' in self.request.headers and
-                    self.request.headers.content_type.startswith('application/json')):
-
-                try:
-                    parsed_data = decode_json(self.request.raw_body)
-                except ValueError:
-                    self.request.body = DotDict({})
-                else:
-                    self.request.body = DotDict(parsed_data)
-
-        def exit(self):
-            pass
-
-    return Json
-
-
-def urlencoded(use_as_fallback=True):
+class urlencoded(object):
     from .uri import QueryString
 
-    class UrlEncoded(Middleware):
-        def enter(self):
-            if (('content_type' in self.request.headers and
-                    self.request.headers.content_type.startswith(
-                    'application/x-www-form-urlencoded'))):
+    def __init__(self, use_as_fallback=False):
+        self.use_as_fallback = use_as_fallback
 
-                self.request.body = QueryString(self.request.raw_body)
+    def __call__(self, request, response, next_):
+        if ('content_type' in request.headers and
+                request.headers.content_type.startswith(
+                'application/x-www-form-urlencoded')):
 
-        def exit(self):
-            pass
+            request.body = self.QueryString(request.raw_body)
+        elif not hasattr(request, 'body'):
+            request.body = {}
 
-    return UrlEncoded
+        next_()
 
 
-def multipart():
+class multipart(object):
     multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
-    class Multipart(Middleware):
-        def enter(self):
-            if ('content_type' in self.request.headers and
-                    'request_method' in self.request.headers and
-                    self.request.headers.request_method in ('PUT', 'POST')):
+    def __call__(self, request, response, next_):
+        if ('content_type' in request.headers and
+                'request_method' in request.headers and
+                request.headers.request_method in ('PUT', 'POST')):
 
-                match = multipart_pattern.match(
-                    self.request.headers.content_type)
+            match = self.multipart_pattern.match(
+                request.headers.content_type)
 
-                if match:
-                    mp = MultipartParser(self.request.wsgi.input, boundary=
-                        match.group(1))
-                    for i in mp:
-                        if i.filename:
-                            self.request.body[i.name] = i
-                        else:
-                            self.request.body[i.name] = i.value
+            if match:
+                mp = MultipartParser(request.wsgi.input, boundary=
+                    match.group(1))
+                for i in mp:
+                    if i.filename:
+                        request.body[i.name] = i
+                    else:
+                        request.body[i.name] = i.value
 
-        def exit(self):
-            pass
+        elif not hasattr(request, 'body'):
+            request.body = {}
 
-    return Multipart
-
-
-def body_parser(json_args={}, urlencoded_args={}, multipart_args={}):
-    json_parser = json(**json_args)
-    urlencoded_parser = urlencoded(**urlencoded_args)
-    multipart_parser = multipart(**multipart_args)
-
-    class BodyParser(Middleware):
-        def __init__(self, *args, **kwargs):
-            Middleware.__init__(self, *args, **kwargs)
-            self._json = json_parser(*args, **kwargs)
-            self._multipart = multipart_parser(*args, **kwargs)
-            self._urlencoded = urlencoded_parser(*args, **kwargs)
-
-        def enter(self):
-            self._json.enter()
-            self._multipart.enter()
-            self._urlencoded.enter()
-
-        def exit(self):
-            pass
-
-    return BodyParser
+        next_()
 
 
-def method_override():
+class body_parser(object):
+    def __init__(self, json_args={}, urlencoded_args={}, multipart_args={}):
+        self.json_parser = json(**json_args)
+        self.urlencoded_parser = urlencoded(**urlencoded_args)
+        self.multipart_parser = multipart(**multipart_args)
+
+    def _dummy_next(self):
+        pass
+
+    def __call__(self, request, response, next_):
+        self.json_parser(request, response, self._dummy_next)
+        self.urlencoded_parser(request, response, self._dummy_next)
+        self.multipart_parser(request, response, self._dummy_next)
+
+        next_()
+
+
+class method_override(object):
     from .uri import QueryString
-    multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
-    class MethodOverride(Middleware):
-        def enter(self):
-            if ('content_type' in self.request.headers and
-                    self.request.headers.content_type ==
-                    'application/x-www-form-urlencoded'):
-                query_string = QueryString(self.request.raw_body)
-                if '_method' in query_string:
-                    self.request.headers.request_method = query_string._method
+    def __init__(self):
+        self.multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
-        def exit(self):
-            pass
-
-    return MethodOverride
+    def __call__(self, request, response, next_):
+        if ('content_type' in request.headers and
+                request.headers.content_type ==
+                'application/x-www-form-urlencoded'):
+            query_string = self.QueryString(request.raw_body)
+            if '_method' in query_string:
+                request.headers.request_method = query_string._method
+        next_()
 
 
-def compress():
-    import zlib
+class compress(object):
+    def __init__(self):
+        self.zlib = __import__('zlib')
 
-    class Compress(Middleware):
-        def enter(self):
-            pass
-
-        def exit(self):
-            if 'accept_encoding' in self.request.headers:
+    def __call__(self, request, response, next_):
+        next_()
+        if 'accept_encoding' in request.headers:
                 if ('deflate' in
-                        self.request.headers.accept_encoding.split(',')):
-                    compressed = zlib.compress(self.response.body)
-                    self.response.headers['Content-Encoding'] = 'deflate'
-                    self.response.headers['Content-Length'] = str(
-                        len(compressed))
-                    self.response.body = compressed
-
-    return Compress
+                        request.headers.accept_encoding.split(',')):
+                    compressed = self.zlib.compress(response.body)
+                    response.headers['Content-Encoding'] = 'deflate'
+                    response.headers['Content-Length'] = str(len(compressed))
+                    response.body = compressed
 
 
-def profiler(fn=None, pr=None):
-    import cProfile
+class profiler(object):
+    def ___init__(self, fn=None, pr=None):
+        self.fn = fn
+        self.pr = pr
+        self.cProfile = __import__('cProfile')
 
-    if pr is None:
-        pr = cProfile.Profile()
+    def __call__(self, request, response, next_):
+        if self.pr is None:
+            self.pr = cProfile.Profile()
 
-    class Profiler(Middleware):
-        def enter(self):
-            pr.enable()
-
-        def exit(self):
-            pr.disable()
-            if fn:
-                fn(pr)
-
-    return Profiler
+        pr.enable()
+        next_()
+        pr.disable()
+        if self.fn:
+            self.fn(self.pr)
