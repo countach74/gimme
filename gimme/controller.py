@@ -1,6 +1,6 @@
 import sys
 import traceback
-from . import renderers
+from .renderers import view
 
 
 class Controller(object):
@@ -11,14 +11,14 @@ class Controller(object):
 
 
 class ErrorController(Controller):
-    @renderers.view('errors/404.html')
+    @view('errors/404.html')
     def http404(self):
         self.response.status(404)
         return {
             'headers': self.request.headers,
         }
 
-    @renderers.view('errors/500.html')
+    @view('errors/500.html')
     def http500(self):
         self.response.status(500)
         e_type, e_value, e_traceback = sys.exc_info()
@@ -29,4 +29,10 @@ class ErrorController(Controller):
                 e_type,
                 e_value,
                 e_traceback)
+        }
+
+    @view('errors/generic.html')
+    def generic(self):
+        return {
+            'status': self.response._status
         }

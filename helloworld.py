@@ -7,7 +7,6 @@ app = gimme.App()
 
 class RootController(gimme.Controller):
   def index(self):
-    print self.request.body
     return "Hello, world!"
 
   def set(self):

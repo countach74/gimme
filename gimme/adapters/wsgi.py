@@ -1,6 +1,7 @@
 import contextlib
 from ..response import Response
 from ..controller import ErrorController
+from ..errors import HTTPError
 
 
 class WSGIAdapter(object):
@@ -21,8 +22,10 @@ class WSGIAdapter(object):
         try:
             response._render()
         except Exception, e:
-            err_response = Response(self.app, self.app.routes.http500, request)
+            err = e if isinstance(e, HTTPError) else HTTPError(500)
+            err_response = err.make_response(request)
             err_response._render([])
+
             start_response(err_response._status, err_response.headers.items())
             yield str(err_response.body)
         else:

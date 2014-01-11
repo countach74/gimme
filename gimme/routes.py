@@ -1,5 +1,5 @@
 import re
-from .errors import RouteError
+from . import errors
 from .request import Request
 from .response import Response
 from .controller import ErrorController
@@ -84,7 +84,7 @@ class Routes(object):
         try:
             method = args[-1]
         except IndexError, e:
-            raise RouteError("No controller method specified.")
+            raise errors.RouteError("No controller method specified.")
         routes_list.append(Route(self, pattern, middleware, method, fn))
 
     def get(self, pattern, *args, **kwargs):
