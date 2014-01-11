@@ -13,17 +13,18 @@ class Controller(object):
 class ErrorController(Controller):
     @view('errors/404.html')
     def http404(self):
-        self.response.status(404)
+        self.response.status = 404
         return {
             'headers': self.request.headers,
         }
 
     @view('errors/500.html')
     def http500(self):
-        self.response.status(500)
+        self.response.status = 500
         e_type, e_value, e_traceback = sys.exc_info()
         traceback.print_exception(e_type, e_value, e_traceback)
         return {
+            'message': "Oh snap! Something's borked. :(",
             'headers': self.request.headers,
             'traceback': traceback.format_exception(
                 e_type,

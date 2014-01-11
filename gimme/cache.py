@@ -17,6 +17,26 @@ class Memory(CacheBackend):
         del(self.cache[key])
 
 
+class Redis(CacheBackend):
+    def __init__(self, arguments):
+        if 'redis' not in arguments:
+            raise KeyError("Redis cache backend expects 'redis' argument.")
+        self.redis = arguments['redis']
+        self.prefix = arguments.get('prefix', 'gimme_session::')
+        self.expiration_time = arguments.get('redis_expiration_time', 60*60*24*7)
+
+    def get(self, key):
+        value = self.redis.get(self.prefix + key)
+        return NO_VALUE if value is None else pickle.loads(value)
+
+    def set(self, key, value):
+        self.redis.set(self.prefix + key, pickle.dumps(value),
+            ex=self.expiration_time)
+
+    def delete(self, key):
+        self.redis.delete(key)
+
+
 class File(CacheBackend):
     def __init__(self, arguments):
         self.directory = arguments.get('directory', '/tmp/gimme')

@@ -79,8 +79,9 @@ class cookie_parser(object):
 
 
 class session(object):
-    def __init__(self, cache='gimme.cache.memory', session_cookie='gimme_session',
-            make_session_key=uuid.uuid4, expiration_time=3600, **kwargs):
+    def __init__(self, cache='gimme.cache.memory',
+            session_cookie='gimme_session', make_session_key=uuid.uuid4,
+            expiration_time=60*60*24*7, **kwargs):
 
         self.cache = cache
         self.session_cookie = session_cookie

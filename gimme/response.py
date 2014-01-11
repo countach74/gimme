@@ -8,6 +8,7 @@ import sys
 from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 from .controller import ErrorController
+import gimme.errors
 
 
 class Response(object):
@@ -96,17 +97,22 @@ class Response(object):
 
         self._controller_class = route.method.im_class
         self._method_name = route.method.__name__
-        self.body = ''
+        self.body = None
 
         # Storage for request-specific local data
         self.locals = DotDict()
 
+    @property
+    def status(self):
+        return self._status
+
+    @status.setter
     def status(self, status):
         if isinstance(status, int):
             self._status = '%s %s' % (status, self._status_code_map[status])
         else:
             self._status = status
-        return self
+        
 
     @property
     def status_code(self):
@@ -150,11 +156,22 @@ class Response(object):
         return self.headers[key]
 
     def redirect(self, path, code=302):
-        self.status(code).location(path)
+        self.status = code
+        self.location = path
 
+    @property
+    def location(self):
+        return self.get('Location')
+
+    @location.setter
     def location(self, path):
         self.set('Location', path)
 
+    @property
+    def type(self):
+        return self.get('Content-Type')
+
+    @type.setter
     def type(self, content_type):
         self.set('Content-Type', content_type)
 
@@ -201,6 +218,8 @@ class Response(object):
         else:
             self.headers['Content-Disposition'] = 'attachment';
 
+    attachment = property(None, attachment)
+
     @property
     def charset(self):
         if 'Content-Type' in self.headers:
@@ -231,3 +250,5 @@ class Response(object):
         for k, v in links.iteritems():
             buffer_.append('<%s>; rel="%s"' % (v, k))
         self.headers['Link'] = ', '.join(buffer_)
+
+    links = property(None, links)

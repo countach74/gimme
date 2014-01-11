@@ -31,7 +31,8 @@ setup(
       ],
       'dogpile.cache': [
         'gimme.cache.memory = gimme.cache:Memory',
-        'gimme.cache.file = gimme.cache:File'
+        'gimme.cache.file = gimme.cache:File',
+        'gimme.cache.redis = gimme.cache:Redis'
       ]
     },
     author='Tim Radke',
