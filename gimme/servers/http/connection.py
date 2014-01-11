@@ -2,10 +2,13 @@ import os
 import sys
 import datetime
 import socket
-from StringIO import StringIO
+import mmap
+import re
+from collections import deque
 from .headers import RequestHeaders, RequestLine
 from ...errors import FDError
 from ...dotdict import DotDict
+from tempfile import NamedTemporaryFile
 
 
 def parse_body(request):
@@ -78,17 +81,20 @@ def log_access(connection, response_length, all_headers):
 
 
 class Connection(object):
+    _headers_pattern = re.compile('^(.{0,8196}\r\n\r\n)', re.S)
+
     def __init__(self, server, accept):
         self.server = server
         self.socket, self.addr = accept
 
-        self.read_buffer = []
-        self.write_buffer = []
+        self.read_buffer = NamedTemporaryFile()
+        self.write_buffer = deque()
 
         self.total_received = 0
         self.request_body_received = 0
         self.request_body_length = None
         self.request_headers = None
+        self.request_body = NamedTemporaryFile()
 
         # Track number of failures for socket
         self.failures = 0
@@ -107,6 +113,14 @@ class Connection(object):
     def handle_connect(self):
         pass
 
+    def get_headers(self):
+        self.read_buffer.seek(0, 0)
+        buf = mmap.mmap(self.read_buffer.fileno(), 0)
+        match = self._headers_pattern.search(buf)
+        self.read_buffer.seek(0, 2)
+        if match:
+            return RequestHeaders(match.group(1))
+
     def handle_read(self):
         try:
             data = self.socket.recv(self.server.chunk_size)
@@ -118,39 +132,29 @@ class Connection(object):
             self.close()
             return
 
-        self.total_received += len(data)
-        self.read_buffer.append(data)
-        last_two_chunks = ''.join(self.read_buffer[-2:])
-
-        if '\r\n\r\n' in last_two_chunks and not self.request_headers:
-            raw_request = ''.join(self.read_buffer).split('\r\n\r\n', 1)
-            self.request_body_received += len(raw_request[1])
-            self.request_headers = RequestHeaders(raw_request[0])
-
-            try:
-                self.request_body_length = int(
-                    self.request_headers['HTTP_CONTENT_LENGTH'])
-            except (KeyError, ValueError):
-                self.request_body_length = 0
-            finally:
-                if self.request_body_received >= self.request_body_length:
-                    if self in self.server.r_list:
-                        self.server.r_list.remove(self)
-                    request = ''.join(self.read_buffer)
-
-                    self.handle_request(request)
-
-        elif self.request_headers:
+        if not self.request_headers:
+            self.read_buffer.write(data)
+            request_headers = self.get_headers()
+            if request_headers:
+                self.read_buffer.seek(len(request_headers._request), 0)
+                body_chunk = self.read_buffer.read()
+                self.request_body.write(body_chunk)
+                self.request_body_received += len(body_chunk)
+                self.request_body_length = int(request_headers.get(
+                    'HTTP_CONTENT_LENGTH', 0))
+                self.request_headers = request_headers
+        elif self.request_body_length > self.request_body_received:
+            # If headers have already been received, stop appending data to
+            # the read_buffer file, but instead add it to the request_body
+            # file.
             self.request_body_received += len(data)
-            if self.request_body_received >= self.request_body_length:
-                if self in self.server.r_list:
-                    self.server.r_list.remove(self)
-                request = ''.join(self.read_buffer)
+            self.request_body.write(data)
 
-                self.handle_request(request)
+        if self.request_body_received >= self.request_body_length:
+            self.handle_request()
 
     def handle_write(self):
-        data = self.write_buffer.pop(0)
+        data = self.write_buffer.popleft()
 
         if data is None:
             self.close()
@@ -164,17 +168,18 @@ class Connection(object):
         #if not self.write_buffer:
         #  self.close()
 
-    def handle_request(self, request):
-        if not request:
-            self.close()
-            return
+    def handle_request(self):
+        try:
+            self.server.r_list.remove(self)
+        except ValueError:
+            pass
 
-        request_body = parse_body(request)
+        self.request_body.seek(0)
 
         wsgi_environ = {
             'wsgi.multiprocess': False,
             'wsgi.url_scheme': 'http',
-            'wsgi.input': StringIO(request_body),
+            'wsgi.input': self.request_body,
             'wsgi.multithread': True,
             'wsgi.version': (1, 0),
             'wsgi.run_once': False,
@@ -182,7 +187,7 @@ class Connection(object):
         }
 
         try:
-            uri_headers = RequestLine(request)
+            uri_headers = RequestLine(self.request_headers._request)
         except ValueError:
             self.close()
             return
@@ -268,6 +273,9 @@ class Connection(object):
             self.server.w_list.remove(self)
         if self in self.server.e_list:
             self.server.e_list.remove(self)
+
+        self.read_buffer.close()
+        self.request_body.close()
 
     def fail(self):
         self.failures += 1

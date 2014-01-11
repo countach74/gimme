@@ -35,7 +35,7 @@ class RequestHeaders(Headers, RequestMixin):
 
     def _parse(self, request):
         result = {}
-        data = re.findall(self.__request_pattern, request)
+        data = re.findall(self.__request_pattern, request.strip())
 
         for k, v in data:
             result["HTTP_%s" % self._format_key(k)] = v.strip()
