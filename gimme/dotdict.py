@@ -7,7 +7,7 @@ class DotDict(dict):
     '''
 
     def __init__(self, data=None):
-        new_data = dict(data) if data else {}
+        new_data = dict(data) if data is not None else {}
 
         for k, v in new_data.iteritems():
             if isinstance(v, dict):

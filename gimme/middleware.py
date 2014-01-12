@@ -6,7 +6,7 @@ import uuid
 import json as jsonlib
 from dogpile.cache import make_region
 from dogpile.cache.api import NO_VALUE
-from multipart import MultipartParser
+from .parsers.multipart import MultipartParser
 from .dotdict import DotDict
 from .ext.session import Session as _Session
 
@@ -121,18 +121,19 @@ class session(object):
 
 class json(object):
     def __call__(self, request, response, next_):
+        if not hasattr(request, 'body'):
+            request.body = DotDict()
+ 
         if ('content_type' in request.headers and
                 request.headers.content_type.startswith('application/json')):
 
             try:
                 parsed_data = jsonlib.loads(request.raw_body)
             except ValueError:
-                request.body = DotDict({})
+                pass
             else:
-                request.body = DotDict(parsed_data)
-
-        elif not hasattr(request, 'body'):
-            request.body = {}
+                for k, v in parsed_data.iteritems():
+                    request.body[k] = v
 
         next_()
 
@@ -144,13 +145,16 @@ class urlencoded(object):
         self.use_as_fallback = use_as_fallback
 
     def __call__(self, request, response, next_):
+        if not hasattr(request, 'body'):
+            request.body = DotDict()
+ 
         if ('content_type' in request.headers and
                 request.headers.content_type.startswith(
                 'application/x-www-form-urlencoded')):
 
-            request.body = self.QueryString(request.raw_body)
-        elif not hasattr(request, 'body'):
-            request.body = {}
+            qs = self.QueryString(request.raw_body)
+            for k, v in qs.iteritems():
+                request.body[k] = v
 
         next_()
 
@@ -159,6 +163,9 @@ class multipart(object):
     multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
     def __call__(self, request, response, next_):
+        if not hasattr(request, 'body'):
+            request.body = DotDict()
+            
         if ('content_type' in request.headers and
                 'request_method' in request.headers and
                 request.headers.request_method in ('PUT', 'POST')):
@@ -167,16 +174,12 @@ class multipart(object):
                 request.headers.content_type)
 
             if match:
-                mp = MultipartParser(request.wsgi.input, boundary=
-                    match.group(1))
-                for i in mp:
-                    if i.filename:
-                        request.body[i.name] = i
+                mp = MultipartParser(match.group(1), request.wsgi.input)
+                for name, mp_file in mp.iteritems():
+                    if mp_file.value:
+                        request.body[name] = mp_file.value
                     else:
-                        request.body[i.name] = i.value
-
-        elif not hasattr(request, 'body'):
-            request.body = {}
+                        request.body[name] = mp_file
 
         next_()
 

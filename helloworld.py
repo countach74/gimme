@@ -7,9 +7,9 @@ app = gimme.App()
 
 
 class RootController(gimme.Controller):
+  @gimme.view('index.html')
   def index(self):
-    print self.request.body
-    return 'oh awesome'
+    return {}
 
   def set(self):
     self.request.session['crap'] = 'oh no!'
@@ -25,22 +25,21 @@ class RootController(gimme.Controller):
     self.response.status(404)
     return "That can't be good!"
 
-  @gimme.view('index.html')
-  def test(self):
-    return {}
-
   def handle_api(self):
     print self.request.params
     return 'oh cool, everything goes here'
 
+  def handle_upload(self):
+    print self.request.body.somefile.file.read()
+    return 'oh, ok'
 
-app.routes.get('/test', RootController.test)
 
 app.routes.all('/', RootController.index)
 app.routes.get('/get', RootController.get)
 app.routes.get('/set', RootController.set)
 app.routes.get('/error', RootController.make_error)
 app.routes.get('/api/(?P<gibberish>.*?)/:user', RootController.handle_api)
+app.routes.post('/submit', RootController.handle_upload)
 
 app.use(gimme.middleware.compress())
 app.use(gimme.middleware.static('public'))

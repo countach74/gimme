@@ -23,6 +23,10 @@ class FDError(GimmeError):
     pass
 
 
+class MultipartError(GimmeError):
+    pass
+
+
 class HTTPError(GimmeError):
     def __init__(self, status=500, message=None):
         self.status = status

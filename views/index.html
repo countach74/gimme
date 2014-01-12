@@ -1,6 +1,15 @@
-<h3>Cool! {{this}}</h3>
-<ul>
-  {% for k, v in headers %}
-    <li><strong>{{k}}:</strong> {{v}}</li>
-  {% endfor %}
-</ul>
+<h3>Cool!</h3>
+
+<form action="/submit" method="POST" enctype="multipart/form-data">
+    <div>
+        <label>Name</label>
+        <input type="text" name="name" />
+    </div>
+    <div>
+        <label>File</label>
+        <input type="file" name="somefile" />
+    </div>
+    <div>
+        <input type="submit" value="Upload" />
+    </div>
+</form>

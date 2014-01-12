@@ -48,6 +48,9 @@ class QueryString(object):
 
     def __contains__(self, key):
         return key in self._parsed
+    
+    def iteritems(self):
+        return self._parsed.iteritems()
 
 
 class URI(object):
