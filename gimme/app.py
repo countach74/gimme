@@ -3,7 +3,7 @@ import sys
 #from wsgiref.simple_server import make_server
 from .routes import Routes
 from .errors import TemplateError
-from .adapters.wsgi import WSGIAdapter
+from .wsgi import WSGIAdapter
 from .servers.http import HTTPServer
 from .servers.logger import SysLogger
 from .ext.engines import Jinja2Extension

@@ -1,7 +1,7 @@
 import contextlib
-from ..response import Response
-from ..controller import ErrorController
-from ..errors import HTTPError
+from .response import Response
+from .controller import ErrorController
+from .errors import HTTPError
 
 
 class WSGIAdapter(object):

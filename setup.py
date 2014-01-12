@@ -6,11 +6,11 @@ setup(
     version='0.1.0',
     packages=[
         'gimme',
-        'gimme.adapters',
         'gimme.ext',
         'gimme.servers',
         'gimme.servers.http',
-        'gimme.servers.logger'
+        'gimme.servers.logger',
+        'gimme.parsers'
     ],
     package_data={
         'gimme': [

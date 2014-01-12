@@ -8,8 +8,7 @@ app = gimme.App()
 
 class RootController(gimme.Controller):
   def index(self):
-    self.response.status = 404
-    self.response.redirect('/set')
+    print self.request.body
     return 'oh awesome'
 
   def set(self):
