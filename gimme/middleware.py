@@ -40,7 +40,7 @@ class static(object):
             if local_path:
                 response.set('Content-Type', self.mimetypes.guess_type(
                     local_path)[0])
-                response.status(200)
+                response.status = 200
                 try:
                     with open(local_path, 'r') as f:
                         response.body = f.read()
