@@ -27,7 +27,7 @@ class WSGIAdapter(object):
             err_response._render([])
 
             start_response(err_response._status, err_response.headers.items())
-            yield str(response.body) if response.body else ''
+            yield str(err_response.body)
         else:
             start_response(response._status, response.headers.items())
-            yield str(response.body) if response.body else ''
+            yield str(response.body)
