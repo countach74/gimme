@@ -226,10 +226,14 @@ class compress(object):
         if 'accept_encoding' in request.headers:
                 if ('deflate' in
                         request.headers.accept_encoding.split(',')):
-                    compressed = self.zlib.compress(response.body)
-                    response.headers['Content-Encoding'] = 'deflate'
-                    response.headers['Content-Length'] = str(len(compressed))
-                    response.body = compressed
+                    try:
+                        compressed = self.zlib.compress(response.body)
+                    except TypeError:
+                        pass
+                    else:
+                        response.headers['Content-Encoding'] = 'deflate'
+                        response.headers['Content-Length'] = str(len(compressed))
+                        response.body = compressed
 
 
 class profiler(object):
