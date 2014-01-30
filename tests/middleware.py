@@ -83,6 +83,7 @@ class UrlEncodedTest(MiddlewareTest):
         self.app.use(gimme.middleware.urlencoded())
         self.environ = make_environ('POST', '/endpoint3', None,
             'some_test=that+is+cool')
+        self.environ['HTTP_CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
 
     def test_urlencoded(self):
         request, response = self.app.routes.match(self.environ)

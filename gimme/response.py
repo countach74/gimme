@@ -214,7 +214,7 @@ class Response(object):
                 % filename)
             mimetype, encoding = mimetypes.guess_type(filename)
             if mimetype:
-                self.type(mimetype)
+                self.type = mimetype
         else:
             self.headers['Content-Disposition'] = 'attachment';
 

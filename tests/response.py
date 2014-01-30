@@ -35,7 +35,7 @@ class ResponseTest(unittest.TestCase):
         assert self.response.get('Location') == '/somewhere_else'
 
     def test_type(self):
-        self.response.type('application/pdf')
+        self.response.type = 'application/pdf'
         assert self.response.headers['Content-Type'] == 'application/pdf'
 
     def test_cookie(self):
@@ -52,14 +52,12 @@ class ResponseTest(unittest.TestCase):
             'cookie_test=deleted; Path=/; Expires=Wed, 31 Dec 1969 16:00:00 GMT')
 
     def test_status(self):
-        self.response.status(401)
+        self.response.status = 401
         assert self.response.status_code == 401
         assert self.response.status_message == 'Not Authorized'
 
     def test_attachment(self):
-        self.response.attachment()
-        assert self.response.headers['Content-Disposition'] == 'attachment'
-        self.response.attachment('file.jpg')
+        self.response.attachment = 'file.jpg'
         assert self.response.headers['Content-Disposition'] == ('attachment; '
             'filename="file.jpg"')
         assert self.response.headers['Content-Type'] == 'image/jpeg'
@@ -71,10 +69,10 @@ class ResponseTest(unittest.TestCase):
         assert self.response.charset == 'ASCII'
 
     def test_links(self):
-        self.response.links({
+        self.response.links = {
             'next': 'http://google.com',
             'prev': 'http://apple.com'
-        })
+        }
         assert self.response.headers['Link'] == (
             '<http://apple.com>; rel="prev", '
             '<http://google.com>; rel="next"')

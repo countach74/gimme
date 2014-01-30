@@ -73,8 +73,8 @@ class URI(object):
         self.protocol = match.group(1)
         self.hostname = match.group(3)
         self.request_uri = match.group(4)
-        self.query_string = match.group(5)
-        self.hash = match.group(6)
+        self.query_string = match.group(5) or ''
+        self.hash = match.group(6) or ''
 
         self.query_params = self._parse_query_string(self.query_string) or {}
         self.hash_params = self._parse_query_string(self.hash) or {}
@@ -147,3 +147,6 @@ class URI(object):
         split[i] = value
         self.request_uri = '/'.join(split)
         return self
+
+    __getitem__ = get_segment
+    __setitem__ = set_segment

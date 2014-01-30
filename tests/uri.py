@@ -1,5 +1,6 @@
 import gimme.uri
 import unittest
+import re
 
 
 class QueryStringTest(unittest.TestCase):
@@ -20,9 +21,6 @@ class QueryStringTest(unittest.TestCase):
         self.qs.some_attr = 'test'
         assert self.qs.some_attr == 'test'
 
-    def test_str(self):
-        assert str(self.qs) == self.raw
-
     def test_getitem(self):
         assert self.qs['name'] == 'bob'
 
@@ -38,3 +36,89 @@ class QueryStringTest(unittest.TestCase):
     def test_contains(self):
         assert 'name' in self.qs
         assert 'not_here' not in self.qs
+
+
+def make_uri_test(name, uri_before, params):
+    class URITest(unittest.TestCase):
+        def setUp(self):
+            self.uri = gimme.uri.URI(uri_before)
+
+        def test_get_segment(self):
+            if 'get_segment' in params:
+                assert self.uri.get_segment(params['get_segment']) == (
+                    params['get_segment_value'])
+
+        def test_set_segment(self):
+            if 'set_segment' in params:
+                self.uri.set_segment(params['set_segment'],
+                    params['set_segment_value'])
+                assert self.uri.get_segment(params['set_segment']) == (
+                    params['set_segment_value'])
+
+        def test_protocol(self):
+            if 'protocol' in params:
+                assert self.uri.protocol == params['protocol']
+
+        def test_hostname(self):
+            if 'hostname' in params:
+                assert self.uri.hostname == params['hostname']
+
+        def test_request_uri(self):
+            if 'request_uri' in params:
+                assert self.uri.request_uri == params['request_uri']
+
+        def test_query_string(self):
+            if 'query_string' in params:
+                assert self.uri.query_string == params['query_string']
+
+        def test_hash(self):
+            if 'hash' in params:
+                assert self.uri.hash == params['hash']
+
+        def test_query_params(self):
+            if 'query_params' in params:
+                for k, v in params['query_params'].iteritems():
+                    assert (k in self.uri.query_params and
+                        self.uri.query_params[k] == v)
+
+        def test_hash_params(self):
+            if 'hash_params' in params:
+                for k, v in params['hash_params'].iteritems():
+                    assert (k in self.uri.hash_params and
+                        self.uri.hash_params[k] == v)
+
+    URITest.__name__ = name
+    return URITest
+
+
+URITest1 = make_uri_test('URITest1', 'http://www.google.com', {
+    'protocol': 'http',
+    'hostname': 'www.google.com',
+    'request_uri': '',
+    'query_string': '',
+    'get_query_string': '',
+    'hash': '',
+    'get_hash_string': '',
+    'query_params': {},
+    'hash_params': {},
+})
+
+URITest2 = make_uri_test('URITest2', 'https://www.thirteen8.com/something/cool?param1=value1&param2=value2#hash=hash_value', {
+    'protocol': 'https',
+    'hostname': 'www.thirteen8.com',
+    'request_uri': '/something/cool',
+    'query_string': 'param1=value1&param2=value2',
+    'hash': 'hash=hash_value',
+    'query_params': {'param1': 'value1', 'param2': 'value2'},
+    'hash_params': {'hash': 'hash_value'},
+})
+
+URITest3 = make_uri_test('URITest3', '/slot1/slot2?param1=value1#hash=hash_value', {
+    'request_uri': '/slot1/slot2',
+    'query_string': 'param1=value1',
+    'hash': 'hash=hash_value',
+    'get_segment': 1,
+    'get_segment_value': 'slot1',
+    'set_segment': 2,
+    'set_segment_value': 'a_new_value'
+})
