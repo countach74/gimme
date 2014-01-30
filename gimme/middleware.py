@@ -165,6 +165,9 @@ class multipart(object):
     def __call__(self, request, response, next_):
         if not hasattr(request, 'body'):
             request.body = DotDict()
+
+        if not hasattr(request, 'files'):
+            request.files = DotDict()
             
         if ('content_type' in request.headers and
                 'request_method' in request.headers and
@@ -179,7 +182,7 @@ class multipart(object):
                     if mp_file.value:
                         request.body[name] = mp_file.value
                     else:
-                        request.body[name] = mp_file
+                        request.files[name] = mp_file
 
         next_()
 

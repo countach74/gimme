@@ -5,7 +5,35 @@ from .uri import QueryString
 from .errors import AcceptFormatError
 
 
-class AcceptFormat(object):
+class AcceptFormatter(object):
+    _pattern = re.compile('(?P<value>[a-zA-Z0-9_\-]+)'
+        '(?:;q=(?P<priority>[0-9]*\.?[0-9]*))?')
+
+    def __init__(self, data):
+        self._data = data
+        self._match = self._pattern.match(data)
+
+        if not self._match:
+            raise AcceptFormatError("Invalid accept format")
+
+        groups = self._match.groupdict()
+        self.value = groups['value']
+        self.priority = (
+            float(groups['priority'])
+            if groups['priority'] is not None else 1)
+
+    def __repr__(self):
+        return "<AcceptFormatter(%s, priority %s)>" % (
+            self.value, self.priority)
+
+    def __str__(self):
+        return self.value
+
+    def __eq__(self, other):
+        return other == self.value
+
+
+class AcceptMimeFormatter(object):
     _pattern = re.compile('(?P<type>[a-zA-Z0-9\-_\*]+)/(?P<subtype>'
         '[a-zA-Z0-9\-_\*]+)(?:;q=(?P<priority>[0-9]*[\.]?[0-9]*))?')
     _mime_pattern = re.compile('(?P<type>[a-zA-Z0-9\-_\*]+)/'
@@ -25,17 +53,17 @@ class AcceptFormat(object):
                 if groups['priority'] is not None else 1)
 
     def __repr__(self):
-        return "<AcceptFormat(%s/%s, priority %s)>" % (
+        return "<AcceptMimeFormatter(%s/%s, priority %s)>" % (
             self.type, self.subtype, self.priority)
 
     def __str__(self):
         return '%s/%s' % (self.type, self.subtype)
 
-    def test(self, mime):
+    def __eq__(self, other):
         if self.type == '*':
             return True
 
-        match = self._mime_pattern.match(mime)
+        match = self._mime_pattern.match(other)
         if match:
             data = match.groupdict()
 
@@ -47,15 +75,18 @@ class AcceptFormat(object):
 
 
 class AcceptedList(object):
-    def __init__(self, raw):
+    _separator = re.compile('\s*,\s*')
+
+    def __init__(self, raw, formatter=AcceptFormatter):
         self._raw = raw
+        self._formatter = formatter
         self._data = list(self._parse(raw))
 
     def _parse(self, raw):
-        split = raw.split(',')
+        split = self._separator.split(self._raw)
         for i in split:
             try:
-                yield AcceptFormat(i)
+                yield self._formatter(i)
             except AcceptFormatError:
                 continue
 
@@ -76,10 +107,13 @@ class AcceptedList(object):
 
         for i in self.get_items_by_priority():
             for j in mime:
-                if i.test(j):
+                if i == j:
                     candidates.append(j)
 
         return candidates[0] if len(candidates) else None
+
+    def as_list(self):
+        return map(str, self.get_items_by_priority())
 
     def __iter__(self):
         for i in self._data:
@@ -87,15 +121,18 @@ class AcceptedList(object):
 
     def __contains__(self, key):
         for i in self._data:
-            if i.test(key):
+            if i == key:
                 return True
         return False
 
     def __repr__(self):
-        return '<AcceptedList()>'
+        items = map(str, self._data)
+        return '<AcceptedList(%s)>' % ', '.join(items)
 
 
 class Request(object):
+    _host_pattern = re.compile('^([^:]*)(:[0-9]+)?')
+
     def __init__(self, app, environ, match=None):
         self.app = app
         self.environ = environ
@@ -111,7 +148,13 @@ class Request(object):
             if 'query_string' in self.headers else '')
 
         self.accepted = AcceptedList(self.headers.accept if 'accept' in
-            self.headers else '')
+            self.headers else '', formatter=AcceptMimeFormatter)
+
+        self.accepted_languages = AcceptedList(self.headers.accept_language
+            if 'accept_language' in self.headers else '')
+
+        self.accepted_charsets = AcceptedList(self.headers.accept_charset
+            if 'accept_charset' in self.headers else '')
 
         self.cookies = self.headers.cookie if 'cookie' in self.headers else ''
 
@@ -130,6 +173,12 @@ class Request(object):
 
     def accepts(self, content_type):
         return content_type in self.accepted
+
+    def accepts_language(self, language):
+        return language in self.accepted_languages
+
+    def accepts_charset(self, charset):
+        return charset in self.accepted_charsets
 
     def is_type(self, query):
         try:
@@ -174,3 +223,40 @@ class Request(object):
     def xhr(self):
         return ('x_requested_with' in self.headers and
             self.headers.x_requested_with == 'XMLHttpRequest')
+
+    @property
+    def path(self):
+        return self.headers.get('path_info', None)
+
+    @property
+    def host(self):
+        raw_host = self.headers.get('host', '')
+        return self._host_pattern.match(raw_host).group(1)
+
+    @property
+    def subdomains(self):
+        split = self.headers.get('host', '').split('.')
+        return split[0:2] if len(split) > 2 else []
+
+    @property
+    def ip(self):
+        return self.headers.get('remote_addr', None)
+
+    @property
+    def secure(self):
+        '''
+        Right now, Gimme only runs in standard HTTP mode. SSL should be
+        implemented at the HTTP server end and piped to Gimme via FastCGI.
+        '''
+        return False
+
+    @property
+    def original_url(self):
+        return self.headers.get('request_uri', None)
+
+    @property
+    def protocol(self):
+        '''
+        Gimme only supports HTTP as of the time of this writing.
+        '''
+        return 'http'
