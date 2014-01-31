@@ -60,6 +60,9 @@ class MultipartFile(object):
             self.file.seek(0)
         else:
             self.value = None
+
+    def __repr__(self):
+        return '<MultipartFile(%s)>' % self.name
         
     def _get_disposition(self):
         disposition = self.headers.get('content-disposition', '')
