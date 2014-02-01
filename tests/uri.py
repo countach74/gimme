@@ -14,7 +14,7 @@ class QueryStringTest(unittest.TestCase):
     def test_getattr(self):
         assert self.qs.name == 'bob'
         assert len(self.qs.item) == 2
-        assert type(self.qs.item) == list
+        assert type(self.qs.item) == gimme.uri.QueryValue
         assert self.qs.item[0] == 'first_item'
 
     def test_setattr(self):
@@ -36,6 +36,22 @@ class QueryStringTest(unittest.TestCase):
     def test_contains(self):
         assert 'name' in self.qs
         assert 'not_here' not in self.qs
+
+    def test_iadd(self):
+        self.qs.item += 'third_item'
+        assert 'third_item' in self.qs.item
+
+    def test_isub(self):
+        self.qs.item -= 'second_item'
+        assert 'second_item' not in self.qs.item
+
+    def test_add(self):
+        val = self.qs.item + 'test'
+        assert 'test' in val
+
+    def test_sub(self):
+        val = self.qs.item - 'second_item'
+        assert 'second_item' not in val
 
 
 def make_uri_test(name, uri_before, params):

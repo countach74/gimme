@@ -63,7 +63,7 @@ class RequestTest(unittest.TestCase):
         assert self.request.secure == False
 
     def test_original_url(self):
-        assert self.request.original_url == '/somewhere/something?this=is+awesome'
+        assert self.request.original_url == '/somewhere/something?this=is%20awesome'
 
     def test_protocol(self):
         assert self.request.protocol == 'http'

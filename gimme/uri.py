@@ -3,34 +3,84 @@ import re
 import urllib
 
 
-class QueryString(object):
-    _reserved_attrs = ('_query_string', '_parsed')
+class QueryValue(list):
+    def __init__(self, value=[]):
+        list.__init__(self, value)
 
-    def __init__(self, query_string):
+    def __str__(self):
+        return self[0]
+
+    def __repr__(self):
+        return '<QueryValue(%s)>' % ', '.join(self)
+
+    def __eq__(self, other):
+        if isinstance(other, str) and len(self) == 1:
+            return self[0] == other
+        else:
+            return list.__eq__(self, other)
+
+    def __add__(self, other):
+        if not isinstance(other, list):
+            other = [other]
+        copy = list(self)
+        return QueryValue(copy + other)
+
+    def __sub__(self, other):
+        if not isinstance(other, list):
+            other = [other]
+        temp = list(self)
+        for i in other:
+            temp.remove(i)
+        return QueryValue(temp)
+
+    def __iadd__(self, other):
+        if not isinstance(other, list):
+            other = [other]
+        return list.__iadd__(self, other)
+
+    def __isub__(self, other):
+        if not isinstance(other, list):
+            other = [other]
+        for i in other:
+            self.remove(i)
+        return self
+
+
+class QueryString(object):
+    _reserved_attrs = ('_query_string', '_quote_plus', '_parsed')
+
+    def __init__(self, query_string, quote_plus=False):
         self._query_string = query_string
-        self._parsed = parse_qs(query_string)
+        self._quote_plus = quote_plus
+        self._parsed = self._parse_qs(query_string)
 
     def __repr__(self):
         return 'QueryString(%s)' % self._parsed
 
+    def __bool__(self):
+        return bool(self._parsed)
+
     def __str__(self):
-        return self.__repr__()
+        result = []
+        encode = urllib.quote_plus if self._quote_plus else urllib.quote
+        for k, v in self._parsed.iteritems():
+            for i in v:
+                result.append('%s=%s' % (k, encode(i)))
+        return '&'.join(result)
 
     def __getattr__(self, key):
         if key not in QueryString._reserved_attrs:
             try:
-                value = self._parsed[key]
+                return self._parsed[key]
             except KeyError, e:
                 raise AttributeError(key)
-            return value if len(value) > 1 else value[0]
         else:
             return object.__getattr__(self, key)
 
     def __setattr__(self, key, value):
         if key not in QueryString._reserved_attrs:
             if key not in self._parsed:
-                self._parsed[key] = []
-            self._parsed[key].append(value)
+                self._parsed[key] = QueryValue([value])
         else:
             return object.__setattr__(self, key, value)
 
@@ -52,10 +102,19 @@ class QueryString(object):
     def __iter__(self):
         for i in self._parsed:
             yield i
+
+    def _parse_qs(self, qs):
+        temp = parse_qs(qs)
+        for k, v in temp.items():
+            temp[k] = QueryValue(v)
+        return temp
     
     def iteritems(self):
         for i in self:
             yield (i, self[i])
+
+    def items(self):
+        return list(self.iteritems())
 
 
 class URI(object):
@@ -76,49 +135,17 @@ class URI(object):
         self.query_string = match.group(5) or ''
         self.hash = match.group(6) or ''
 
-        self.query_params = self._parse_query_string(self.query_string) or {}
-        self.hash_params = self._parse_query_string(self.hash) or {}
-
-    def _combine_params(self, params):
-        result = []
-
-        for k, value in params.iteritems():
-            key = self.encode_string(k)
-            if value is None:
-                result.append(key)
-            else:
-                result.append(key + '=' + self.encode_string(value))
-
-        return '&'.join(result)
-
-    def _parse_query_string(self, query_string):
-        result = {}
-        params = query_string.split('&')
-
-        for i in params:
-            temp = i.split('=', 1)
-            key = self.decode_string(temp[0])
-            if len(temp) == 1:
-                result[key] = None
-            else:
-                result[key] = self.decode_string(temp[1])
-
-        return result
+        self.query_params = QueryString(self.query_string)
+        self.hash_params = QueryString(self.hash)
 
     def get_query_string(self):
-        return self._combine_params(self.query_params)
-
-    def encode_string(self, s):
-        return urllib.quote(s) if self._escape_plus else urllib.quote_plus(s)
-
-    def decode_string(self, s):
-        return (urllib.unquote(s) if self._escape_plus else
-            urllib.unquote_plus(s))
+        return str(self.query_params)
 
     def get_hash_string(self):
-        if self.hash or self.hash_params:
-            return (self.hash if not self.hash_params else
-                self._combine_params(self.hash_params))
+        if self.hash_params:
+            return str(self.hash_params)
+        elif self.hash:
+            return self.hash
 
     def get_uri(self):
         uri = [];
