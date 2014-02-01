@@ -3,6 +3,7 @@ from .headers import RequestHeaders
 from .dotdict import DotDict
 from .uri import QueryString
 from .errors import AcceptFormatError
+from .parsers.contenttype import ContentType
 
 
 class AcceptFormatter(object):
@@ -157,6 +158,8 @@ class Request(object):
             if 'accept_charset' in self.headers else '')
 
         self.cookies = self.headers.cookie if 'cookie' in self.headers else ''
+        self.type = (ContentType(self.headers.content_type) if 'content_type'
+            in self.headers else None)
 
     def _populate_headers(self, environ):
         for k, v in environ.iteritems():
@@ -179,24 +182,6 @@ class Request(object):
 
     def accepts_charset(self, charset):
         return charset in self.accepted_charsets
-
-    def is_type(self, query):
-        try:
-            content_type = self.headers.content_type
-        except AttributeError, e:
-            return False
-        q_split = query.split('/', 1)
-        c_split = content_type.split('/', 1)
-        if len(c_split) != 2:
-            return False
-        if len(q_split) == 2:
-            if q_split[1] == '*' and q_split[0] == c_split[0]:
-                return True
-            else:
-                return q_split[0] == c_split[0] and q_split[1] == c_split[1]
-        elif len(q_split) == 1:
-            return q_split[0] == c_split[1]
-        return False
 
     @property
     def raw_body(self):

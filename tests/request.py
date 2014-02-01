@@ -20,16 +20,16 @@ class RequestTest(unittest.TestCase):
     def setUp(self):
         pass
 
-    def test_is_type(self):
+    def test_type(self):
         # Test fails
-        assert self.request.is_type('crash') is False
-        assert self.request.is_type('text/*') is False
-        assert self.request.is_type('text/html') is False
+        assert self.request.type != 'crash'
+        assert self.request.type != 'text/*'
+        assert self.request.type != 'text/html'
 
         # Test passes
-        assert self.request.is_type('json') is True
-        assert self.request.is_type('application/*') is True
-        assert self.request.is_type('application/json') is True
+        assert self.request.type == 'json'
+        assert self.request.type == 'application/*'
+        assert self.request.type == 'application/json'
 
     def test_body(self):
         assert self.request.raw_body == '{"test": "data"}'
@@ -43,6 +43,10 @@ class RequestTest(unittest.TestCase):
     def test_param(self):
         # Not quite sure how I should test this yet
         pass
+
+    def test_query(self):
+        assert self.request.query.this == 'is awesome'
+        assert 'crap' not in self.request.query
 
     def test_xhr(self):
         assert self.request.xhr

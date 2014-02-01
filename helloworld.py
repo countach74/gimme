@@ -30,7 +30,7 @@ class RootController(gimme.Controller):
     return 'oh cool, everything goes here'
 
   def handle_upload(self):
-    print self.request.body.somefile.file.read()
+    print self.request.files.somefile.file.read()
     return 'oh, ok'
 
 
