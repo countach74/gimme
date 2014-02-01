@@ -67,7 +67,7 @@ class SessionTest(MiddlewareTest):
 class JsonTest(MiddlewareTest):
     def setUp(self):
         self.app.use(gimme.middleware.json())
-        self.environ = make_environ('POST', '/endpoint3', None,
+        self.environ = make_environ('POST', '/endpoint3',
             '{"simple": "json test"}')
         self.environ['HTTP_CONTENT_TYPE'] = 'application/json'
 
@@ -81,7 +81,7 @@ class JsonTest(MiddlewareTest):
 class UrlEncodedTest(MiddlewareTest):
     def setUp(self):
         self.app.use(gimme.middleware.urlencoded())
-        self.environ = make_environ('POST', '/endpoint3', None,
+        self.environ = make_environ('POST', '/endpoint3',
             'some_test=that+is+cool')
         self.environ['HTTP_CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
 

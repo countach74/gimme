@@ -236,7 +236,7 @@ class Request(object):
     @property
     def subdomains(self):
         split = self.headers.get('host', '').split('.')
-        return split[0:2] if len(split) > 2 else []
+        return split[:-2] if len(split) > 2 else []
 
     @property
     def ip(self):

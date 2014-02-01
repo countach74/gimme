@@ -72,7 +72,7 @@ class URI(object):
 
         self.protocol = match.group(1)
         self.hostname = match.group(3)
-        self.request_uri = match.group(4)
+        self.path = match.group(4)
         self.query_string = match.group(5) or ''
         self.hash = match.group(6) or ''
 
@@ -131,7 +131,7 @@ class URI(object):
             uri.append('//')
 
         uri.append(self.hostname)
-        uri.append(self.request_uri)
+        uri.append(self.path)
         uri.append('?' + query_string if len(query_string) else '')
 
         if hash_string:
@@ -140,12 +140,12 @@ class URI(object):
         return ''.join(uri)
 
     def get_segment(self, i):
-        return self.request_uri.split('/')[i]
+        return self.path.split('/')[i]
 
     def set_segment(self, i, value):
-        split = self.request_uri.split('/')
+        split = self.path.split('/')
         split[i] = value
-        self.request_uri = '/'.join(split)
+        self.path = '/'.join(split)
         return self
 
     __getitem__ = get_segment

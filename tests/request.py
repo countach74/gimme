@@ -10,6 +10,7 @@ class RequestTest(unittest.TestCase):
         self.app = App()
         body = '{"test": "data"}'
         self.environ = test_helpers.make_environ(
+            uri='http://www.google.com/somewhere/something?this=is+awesome',
             body=body, method='POST')
         self.environ['HTTP_CONTENT_TYPE'] = 'application/json'
         self.environ['HTTP_CONTENT_LENGTH'] = str(len(body))
@@ -45,3 +46,24 @@ class RequestTest(unittest.TestCase):
 
     def test_xhr(self):
         assert self.request.xhr
+
+    def test_path(self):
+        assert self.request.path == '/somewhere/something'
+
+    def test_host(self):
+        assert self.request.host == 'www.google.com'
+
+    def test_subdomains(self):
+        assert self.request.subdomains == ['www']
+
+    def test_ip(self):
+        assert self.request.ip == '127.0.0.1'
+
+    def test_secure(self):
+        assert self.request.secure == False
+
+    def test_original_url(self):
+        assert self.request.original_url == '/somewhere/something?this=is+awesome'
+
+    def test_protocol(self):
+        assert self.request.protocol == 'http'

@@ -63,9 +63,9 @@ def make_uri_test(name, uri_before, params):
             if 'hostname' in params:
                 assert self.uri.hostname == params['hostname']
 
-        def test_request_uri(self):
+        def test_path(self):
             if 'request_uri' in params:
-                assert self.uri.request_uri == params['request_uri']
+                assert self.uri.path == params['request_uri']
 
         def test_query_string(self):
             if 'query_string' in params:

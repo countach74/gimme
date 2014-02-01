@@ -1,7 +1,13 @@
 import StringIO
+from gimme.uri import URI
 
 
-def make_environ(method='GET', path_info='/', query_string=None, body=''):
+def make_environ(method='GET', uri='/', body=''):
+    uri = URI(uri)
+
+    query_string = uri.get_query_string()
+    path = uri.path
+
     return {
         'DOCUMENT_ROOT': '/home/user/app/dir',
         'GATEWAY_INTERFACE': 'CGI/1.1',
@@ -12,17 +18,17 @@ def make_environ(method='GET', path_info='/', query_string=None, body=''):
         'HTTP_CONNECTION': 'keep-alive',
         'HTTP_COOKIE': 'gimme_session=f6225d448db99e2102cc25ef9c1d123d71f132ba3705fc168bd72a717cb9638b',
         'HTTP_DNT': '1',
-        'HTTP_HOST': 'localhost:8080',
+        'HTTP_HOST': '%s:8080' % (uri.hostname or 'localhost'),
         'HTTP_USER_AGENT': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_8_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36',
         'HTTP_CONTENT_LENGTH': len(body),
-        'PATH_INFO': path_info,
+        'PATH_INFO': uri.path,
         'PATH_TRANSLATED': '/path/to//',
-        'QUERY_STRING': query_string or '',
+        'QUERY_STRING': uri.get_query_string() or '',
         'REDIRECT_STATUS': 200,
         'REMOTE_ADDR': '127.0.0.1',
         'REMOTE_PORT': 54812,
         'REQUEST_METHOD': method,
-        'REQUEST_URI': path_info if not query_string else '%s?%s' % (path_info, query_string),
+        'REQUEST_URI': path if not query_string else '%s?%s' % (path, query_string),
         'SCRIPT_FILENAME': '/path/to/file.py',
         'SCRIPT_NAME': '',
         'SERVER_ADDR': '127.0.0.1',
