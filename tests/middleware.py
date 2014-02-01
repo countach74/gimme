@@ -108,3 +108,30 @@ class CompressTest(MiddlewareTest):
         request, response = self.app.routes.match(self.environ)
         response._render()
         assert response.body == 'endpoint1_response'
+
+
+class BodyParserTest(MiddlewareTest):
+    def setUp(self):
+        self.app.use(gimme.middleware.body_parser())
+
+        # JSON
+        self.json_environ = make_environ('POST', '/endpoint3',
+            '{"something": "cool"}')
+        self.json_environ['HTTP_CONTENT_TYPE'] = 'application/json'
+
+        # URL Encoded
+        self.url_environ = make_environ('POST', '/endpoint3',
+            'something=cool2')
+        self.url_environ['HTTP_CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
+
+    def test_json(self):
+        request, response = self.app.routes.match(self.json_environ)
+        response._render()
+        assert 'something' in request.body
+        assert request.body.something == 'cool'
+
+    def test_url(self):
+        request, response = self.app.routes.match(self.url_environ)
+        response._render()
+        assert 'something' in request.body
+        assert request.body.something == 'cool2'

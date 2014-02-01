@@ -124,9 +124,7 @@ class json(object):
         if not hasattr(request, 'body'):
             request.body = DotDict()
  
-        if ('content_type' in request.headers and
-                request.headers.content_type.startswith('application/json')):
-
+        if request.type == 'json':
             try:
                 parsed_data = jsonlib.loads(request.raw_body)
             except ValueError:
@@ -148,10 +146,7 @@ class urlencoded(object):
         if not hasattr(request, 'body'):
             request.body = DotDict()
  
-        if ('content_type' in request.headers and
-                request.headers.content_type.startswith(
-                'application/x-www-form-urlencoded')):
-
+        if request.type == 'application/x-www-form-urlencoded':
             qs = self.QueryString(request.raw_body)
             for k, v in qs.iteritems():
                 request.body[k] = v
@@ -211,9 +206,7 @@ class method_override(object):
         self.multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
     def __call__(self, request, response, next_):
-        if ('content_type' in request.headers and
-                request.headers.content_type ==
-                'application/x-www-form-urlencoded'):
+        if request.type == 'application/x-www-form-urlencoded':
             query_string = self.QueryString(request.raw_body)
             if '_method' in query_string:
                 request.headers.request_method = query_string._method
