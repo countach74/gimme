@@ -1,5 +1,6 @@
 import types
 from json import dumps as dump_json
+import errors
 
 
 class ViewDecorator(object):
@@ -66,13 +67,14 @@ class ViewDecorator(object):
     def response(self):
         return self.obj.response
 
+    def data(self):
+        return self.fn(self.obj)
 
-def view(template=None):
+
+def view(template):
     class View(ViewDecorator):
         def call(self, body):
-            if template:
-                return self.app.render(template, body)
-            return body
+            return self.response.render(template, body)
     return View
 
 

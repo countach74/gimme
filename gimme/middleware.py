@@ -1,6 +1,7 @@
 import abc
 import re
 import os
+import sys
 import random
 import uuid
 import json as jsonlib
@@ -9,6 +10,7 @@ from dogpile.cache.api import NO_VALUE
 from .parsers.multipart import MultipartParser
 from .dotdict import DotDict
 from .ext.session import Session as _Session
+from jinja2 import Environment, PackageLoader, ChoiceLoader, FileSystemLoader
 
 
 class connection_helper(object):
@@ -247,3 +249,22 @@ class profiler(object):
         pr.disable()
         if self.fn:
             self.fn(self.pr)
+
+
+class jinja2(object):
+    def __init__(self, environment=None):
+        if not environment:
+            app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
+            environment = Environment(loader=ChoiceLoader([
+                FileSystemLoader(os.path.join(app_path, 'views')),
+                PackageLoader('gimme', 'templates')
+            ]))
+
+        self.environment = environment
+
+    def __call__(self, request, response, next_):
+        response.render = self.render
+        next_()
+
+    def render(self, template, params):
+        return self.environment.get_template(template).render(params)

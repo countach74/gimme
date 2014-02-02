@@ -137,7 +137,6 @@ class Request(object):
     def __init__(self, app, environ, match=None):
         self.app = app
         self.environ = environ
-        self.match = match
         self.headers = RequestHeaders()
         self.wsgi = RequestHeaders()
         self.params = DotDict(match.match.groupdict() if match else {})
@@ -145,19 +144,18 @@ class Request(object):
 
         self._populate_headers(environ)
 
-        self.query = QueryString(self.headers.query_string
-            if 'query_string' in self.headers else '')
+        self.query = QueryString(self.headers.get('query_string', ''))
 
-        self.accepted = AcceptedList(self.headers.accept if 'accept' in
-            self.headers else '', formatter=AcceptMimeFormatter)
+        self.accepted = AcceptedList(
+            self.headers.get('accept', ''), formatter=AcceptMimeFormatter)
 
-        self.accepted_languages = AcceptedList(self.headers.accept_language
-            if 'accept_language' in self.headers else '')
+        self.accepted_languages = AcceptedList(
+            self.headers.get('accept_language', ''))
 
-        self.accepted_charsets = AcceptedList(self.headers.accept_charset
-            if 'accept_charset' in self.headers else '')
+        self.accepted_charsets = AcceptedList(
+            self.headers.get('accept_charset', ''))
 
-        self.cookies = self.headers.cookie if 'cookie' in self.headers else ''
+        self.cookies = self.headers.get('cookie', '')
         self.type = (ContentType(self.headers.content_type) if 'content_type'
             in self.headers else None)
 
@@ -186,9 +184,8 @@ class Request(object):
     @property
     def raw_body(self):
         if self.__raw_body is None:
-            if ('request_method' in self.headers and
-                    self.headers.request_method in ('PUT', 'POST') and
-                    'content_length' in self.headers):
+            if (self.headers.get('request_method', None) in ('PUT', 'POST')
+                    and 'content_length' in self.headers):
                 content_length = int(self.headers.content_length)
                 self.__raw_body = self.wsgi.input.read(content_length)
             else:
@@ -206,8 +203,7 @@ class Request(object):
 
     @property
     def xhr(self):
-        return ('x_requested_with' in self.headers and
-            self.headers.x_requested_with == 'XMLHttpRequest')
+        return self.headers.get('x_requested_with', None) == 'XMLHttpRequest'
 
     @property
     def path(self):

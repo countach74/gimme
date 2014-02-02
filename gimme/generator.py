@@ -1,5 +1,6 @@
 import argparse
 import os
+import stat
 from jinja2 import Environment, FileSystemLoader, ChoiceLoader, PackageLoader
 
 
@@ -34,6 +35,11 @@ def save_file(config, file_path, file_contents):
         raise StandardError("File already exists: %s" % path)
     with open(path, 'w') as f:
         f.write(file_contents)
+        trash, ext = os.path.splitext(file_path)
+        if ext == '.fcgi':
+            st = os.fstat(f.fileno())
+            os.fchmod(f.fileno(), st.st_mode | stat.S_IXUSR | stat.S_IXGRP |
+                stat.S_IXOTH)
 
 
 def make_public_dirs(config):

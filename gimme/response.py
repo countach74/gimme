@@ -252,3 +252,6 @@ class Response(object):
         self.headers['Link'] = ', '.join(buffer_)
 
     links = property(None, links)
+
+    def render(self, template, params):
+        raise NotImplementedError("Response.render() not implemented!")

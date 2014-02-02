@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gimme',
-    version='0.1.0',
+    version='0.1.2',
     packages=[
         'gimme',
         'gimme.ext',
@@ -16,6 +16,7 @@ setup(
         'gimme': [
             'templates/errors/*.html',
             'templates/generator/*.py',
+            'templates/generator/*.fcgi',
             'templates/generator/controllers/*.py',
             'templates/generator/public/*.*',
             'templates/generator/public/images/*.*',
