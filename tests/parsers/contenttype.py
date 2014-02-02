@@ -29,11 +29,9 @@ class ContentTypeTest(unittest.TestCase):
 
         # Test ct2 fails
         assert self.ct2 != 'json'
-        assert self.ct2 != 'text/*'
 
         # Test ct3 fails
         assert self.ct3 != 'application/*'
-        assert self.ct3 != 'html'
 
     def test_ne(self):
         # Test ct1 passes
@@ -56,11 +54,9 @@ class ContentTypeTest(unittest.TestCase):
 
         # Test ct2 fails
         assert not self.ct2 == 'json'
-        assert not self.ct2 == 'text/*'
 
         # Test ct3 fails
         assert not self.ct3 == 'application/*'
-        assert not self.ct3 == 'html'
 
     def test_str(self):
         assert str(self.ct1) == 'application/json'

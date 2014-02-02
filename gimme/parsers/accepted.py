@@ -63,7 +63,9 @@ class AcceptedList(list):
         return type(self)(list.__getslice__(self, start, end))
 
     def filter(self, value):
-        return type(self)([i for i in self if i == value])
+        if not isinstance(value, list):
+            value = [value]
+        return type(self)([i for i in self if i in value])
 
     def get_by_priority(self):
         return type(self)(sorted(self, reverse=True))

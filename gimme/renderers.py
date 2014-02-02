@@ -81,7 +81,42 @@ def view(template):
 def json():
     class Json(ViewDecorator):
         def call(self, body):
-            print 'json()'
             self.response.headers['Content-Type'] = 'application/json'
             return dump_json(body)
     return Json
+
+
+def format(type_):
+    class Format(object):
+        def __init__(self, fn):
+            self.types = {
+                type_: fn
+            }
+            self.__name__ = fn.__name__
+
+        def __get__(self, obj, cls=None):
+            self.obj = obj
+            self.cls = cls
+
+            if not obj:
+                return types.UnboundMethodType(self, None, cls)
+
+            return types.MethodType(self, obj, cls)
+
+        def __call__(self, *args, **kwargs):
+            use_type = self.obj.request.accepted.filter(self.types.keys()).get_highest_priority()
+            fn = self.types[str(use_type)] if use_type else self.fn
+            fn._obj = self.obj
+
+            return fn(*args, **kwargs)
+
+        def call(self, body):
+            return body
+
+        def add_type(self, type_):
+            def wrapper(fn):
+                self.types[type_] = fn
+                return self
+            return wrapper
+
+    return Format

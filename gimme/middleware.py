@@ -9,7 +9,7 @@ from dogpile.cache import make_region
 from dogpile.cache.api import NO_VALUE
 from .parsers.multipart import MultipartParser
 from .dotdict import DotDict
-from .ext.session import Session as _Session
+from .ext.session import Session as Session
 from jinja2 import Environment, PackageLoader, ChoiceLoader, FileSystemLoader
 
 
@@ -110,14 +110,14 @@ class session(object):
         session_data = self.region.get(key)
 
         if session_data != NO_VALUE:
-            return _Session(self.region, key, session_data)
+            return Session(self.region, key, session_data)
         else:
             return self._create_session(response)
 
     def _create_session(self, response):
         key = str(self.make_session_key())
         response.set('Set-Cookie', '%s=%s' % (self.session_cookie, key))
-        new_session = _Session(self.region, key, {}, True)
+        new_session = Session(self.region, key, {}, True)
         return new_session
 
 
