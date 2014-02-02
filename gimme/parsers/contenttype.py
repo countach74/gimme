@@ -24,13 +24,13 @@ class ContentType(object):
             except ValueError:
                 return False
 
-        if other._category is None or self._type is None:
+        if other._category is None or self._category is None:
             return (other._type == self._type
                 or other._type == '*'
                 or self._type == '*')
         elif (other._category == self._category
                 or self._category == '*'
-                or other._type == '*'):
+                or other._category == '*'):
             if (other._type == '*' or self._type == '*') or (
                     other._type == self._type):
                 return True
