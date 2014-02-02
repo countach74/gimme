@@ -55,12 +55,15 @@ class AcceptedList(list):
 
     def __contains__(self, obj):
         for i in self:
-            if i.value == obj:
+            if i == obj:
                 return True
         return False
 
+    def __getslice__(self, start, end):
+        return type(self)(list.__getslice__(self, start, end))
+
     def filter(self, value):
-        return type(self)([i for i in self if i.value == value])
+        return type(self)([i for i in self if i == value])
 
     def get_by_priority(self):
         return type(self)(sorted(self, reverse=True))
