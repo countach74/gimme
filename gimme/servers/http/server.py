@@ -1,3 +1,4 @@
+import sys
 from .connection import Connection
 from ...errors import FDError
 from . import modulemonitor

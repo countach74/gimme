@@ -92,6 +92,7 @@ def format(type_):
             self.types = {
                 type_: fn
             }
+            self.fn = fn
             self.__name__ = fn.__name__
 
         def __get__(self, obj, cls=None):
