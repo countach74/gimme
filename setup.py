@@ -26,7 +26,7 @@ setup(
             'templates/generator/views/root/*.*'
         ]
     },
-    entry_points = {
+    entry_points={
       'console_scripts': [
         'gimme = gimme.generator:main'
       ],
@@ -42,5 +42,5 @@ setup(
     description='An ExpressJS-inspired web framework... in Python',
     license='MIT',
     test_suite='tests',
-    install_requires=['jinja2', 'multipart', 'dogpile.cache'],
+    install_requires=['jinja2', 'dogpile.cache'],
 )

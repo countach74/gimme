@@ -31,7 +31,7 @@ class ResponseTest(unittest.TestCase):
 
     def test_location(self):
         self.response.redirect('/somewhere_else')
-        assert self.response.status_code == 302
+        assert self.response.status.code == 302
         assert self.response.get('Location') == '/somewhere_else'
 
     def test_type(self):
@@ -53,8 +53,8 @@ class ResponseTest(unittest.TestCase):
 
     def test_status(self):
         self.response.status = 401
-        assert self.response.status_code == 401
-        assert self.response.status_message == 'Not Authorized'
+        assert self.response.status.code == 401
+        assert self.response.status.text == 'Not Authorized'
 
     def test_attachment(self):
         self.response.attachment = 'file.jpg'

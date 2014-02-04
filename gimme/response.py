@@ -8,87 +8,19 @@ import sys
 from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 from .controller import ErrorController
+from .status import StatusCode
 import gimme.errors
 
 
 class Response(object):
     _charset_pattern = re.compile('(.*?); charset=(.*)$')
-    _status_code_map = {
-        100: 'Continue',
-        101: 'Switching Protocols',
-        102: 'Processing',
-        200: 'OK',
-        201: 'Created',
-        202: 'Accepted',
-        203: 'Non-Authoritative Information',
-        204: 'No Content',
-        205: 'Reset Content',
-        206: 'Partial Content',
-        207: 'Multi-Status',
-        208: 'Already Reported',
-        226: 'IM Used',
-        300: 'Multiple Choices',
-        301: 'Moved Permanently',
-        302: 'Found',
-        303: 'See Other',
-        304: 'Not Modified',
-        305: 'Use Proxy',
-        306: 'Switch Proxy',
-        307: 'Temporary Redirect',
-        308: 'Permanent Redirect',
-        400: 'Bad Request',
-        401: 'Not Authorized',
-        402: 'Payment Required',
-        403: 'Forbidden',
-        404: 'Not Found',
-        405: 'Method Not Allowed',
-        406: 'Not Acceptable',
-        407: 'Proxy Authentication Requred',
-        408: 'Request Timeout',
-        409: 'Conflict',
-        410: 'Gone',
-        411: 'Length Required',
-        412: 'Precondition Failed',
-        413: 'Request Entity Too Large',
-        414: 'Request-URI Too Long',
-        415: 'Unsupported Media Type',
-        416: 'Request Range Not Satisfiable',
-        417: 'Expectation Failed',
-        418: "I'm a teapot",
-        419: 'Authentication Timeout',
-        420: 'Enhance Your Calm',
-        422: 'Unprocessable Entity',
-        423: 'Locked',
-        424: 'Failed Dependency',
-        425: 'Unordered Collection',
-        426: 'Upgrade Required',
-        428: 'Precondition Required',
-        429: 'Too Many Requests',
-        431: 'Request Header Fields Too Large',
-        444: 'No Response',
-        451: 'Unavailable For Legal Reasons',
-        500: 'Internal Server Error',
-        501: 'Not Implemented',
-        502: 'Bad Gateway',
-        503: 'Service Unavailable',
-        504: 'Gateway Timeout',
-        505: 'HTTP Version Not Supported',
-        506: 'Variant Also Negotiates',
-        507: 'Insufficient Storage',
-        508: 'Loop Detected',
-        509: 'Bandwidth Limit Exceeded',
-        510: 'Not Extended',
-        511: 'Network Authentication Required',
-        522: 'Connection Timed Out'
-    }
-
     mimetypes.init()
 
     def __init__(self, app, route, request):
         self.app = app
         self.route = route
         self.request = request
-        self._status = '200 OK'
+        self._status = StatusCode('200 OK')
 
         try:
             self.headers = ResponseHeaders(dict(app.get('default headers')))
@@ -108,19 +40,7 @@ class Response(object):
 
     @status.setter
     def status(self, status):
-        if isinstance(status, int):
-            self._status = '%s %s' % (status, self._status_code_map[status])
-        else:
-            self._status = status
-        
-
-    @property
-    def status_code(self):
-        return int(self._status.split(None, 1)[0])
-
-    @property
-    def status_message(self):
-        return self._status.split(None, 1)[1]
+        self._status.set(status)
 
     def _make_next(self, i, fn, method, next_fns):
         if fn is method:
