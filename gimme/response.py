@@ -8,7 +8,7 @@ import sys
 from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 from .controller import ErrorController
-from .status import StatusCode
+from .parsers.status import StatusCode
 import gimme.errors
 
 

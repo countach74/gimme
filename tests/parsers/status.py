@@ -1,5 +1,5 @@
 import unittest
-from gimme.status import StatusCode
+from gimme.parsers.status import StatusCode
 
 
 class StatusCodeTest(unittest.TestCase):
