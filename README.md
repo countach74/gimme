@@ -12,7 +12,6 @@ might look something like this:
 import gimme
   
 class RootController(gimme.Controller):
-  @gimme.view('index.html')   # load the 'index.html' view
   def index(self):
     # request, response and app objects are made available to the
     # controllers via self.request, self.response, and self.app
@@ -52,7 +51,20 @@ app.use(gimme.middleware.cookie_parser())
 app.use(gimme.middleware.session())
 app.use(gimme.middleware.body_parser())
 
-app.get('/', RootController.index)
+# Assign a route to a controller and a controller to a view
+app.get('/', RootController.index + 'index.html')
+
+# Other routes can be made that allow multiple content-type handling. E.g.:
+app.get('/alternate', RootController.index + (
+    (gimme.Template('index.html') == 'text/html')
+    (RootController.index.json() == 'application/json')
+))
+
+# ... which conditionally returns the rendered view 'index.html' or a JSON
+# representation, depending on the request's "Accept" header.
+#
+# Or, alternatively, a separate JSON endpoint can be created like such:
+app.get('/json', RootController.index.json())
 
 # Apply CustomMiddleware to a specific route
 app.get('/route_middleware', custom_middleware, RootController.index)
@@ -68,7 +80,8 @@ if __name__ == '__main__':
 
 By default, Jinja2 is used for a template engine, but other adapters
 can be written as well. More documentation to come on how to do this
-(until then, check out the gimme/ext/engines.py file).
+(until then, check out the gimme/engines.py file). Engines are passed
+to the App object on instantiation: `app = App(engine=your_engine)`.
 
 One thing to note is that Gimme's HTTP server is, unlike Node's, a
 development server and is not intended to be used for production.
