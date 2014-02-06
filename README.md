@@ -56,7 +56,7 @@ app.get('/', RootController.index + 'index.html')
 
 # Other routes can be made that allow multiple content-type handling. E.g.:
 app.get('/alternate', RootController.index + (
-    (gimme.Template('index.html') == 'text/html')
+    (gimme.Template('index.html') == 'text/html') |
     (RootController.index.json() == 'application/json')
 ))
 
