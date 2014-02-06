@@ -27,8 +27,8 @@ class Response(object):
         except KeyError, e:
             self.headers = ResponseHeaders()
 
-        self._controller_class = route.method.im_class
-        self._method_name = route.method.__name__
+        self._controller_class = (route.method.im_class
+            if hasattr(route.method, 'im_class') else None)
         self.body = None
 
         # Storage for request-specific local data
@@ -52,8 +52,14 @@ class Response(object):
         return next_
 
     def _render(self, middleware=None):
-        controller = self._controller_class(self.app, self.request, self)
-        method = getattr(controller, self._method_name)
+        if self._controller_class:
+            controller = self._controller_class(self.app, self.request, self)
+            method = self.route.method
+        else:
+            controller = None
+            def method():
+                return self.route.method
+
 
         if middleware is None:
             middleware = (self.app._middleware + self.route.middleware

@@ -1,5 +1,6 @@
 from . import response
 from . import controller
+from .parsers.status import StatusCode
 import gimme.routes
 
 
@@ -28,11 +29,11 @@ class MultipartError(GimmeError):
 
 
 class HTTPError(GimmeError):
-    def __init__(self, status=500, message=None):
-        self.status = status
-        self.message = message or response.Response._status_code_map[status]
+    def __init__(self, status=500):
+        self.status = StatusCode(status)
         try:
-            method = getattr(controller.ErrorController, 'http%s' % status)
+            method = getattr(controller.ErrorController, 'http%s'
+                % self.status.code)
         except AttributeError:
             method = controller.ErrorController.generic
 
@@ -40,7 +41,7 @@ class HTTPError(GimmeError):
 
     def make_response(self, request):
         res = response.Response(request.app, self.route, request)
-        res.status = '%s %s' % (self.status, self.message)
+        res.status = self.status.get()
         return res
 
 
@@ -51,6 +52,6 @@ class HTTPRedirect(HTTPError):
 
     def make_response(self, request):
         res = response.Response(request.app, self.route, request)
-        res.status = '%s %s' % (self.status, self.message)
-        res.redirect(self.url, self.status)
+        res.status = self.status.get()
+        res.redirect(self.url, self.status.code)
         return res

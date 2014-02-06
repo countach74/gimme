@@ -1,123 +1,103 @@
 import types
 from json import dumps as dump_json
+from collections import namedtuple
+from .parsers.contenttype import ContentType
 import errors
+import zlib
 
 
-class ViewDecorator(object):
-    def __new__(cls, fn=None):
-        if isinstance(fn, ViewDecorator):
-            obj = object.__new__(cls, fn)
-            obj.__init__(fn)
-            fn.modifiers.append(obj)
-            return fn
-        return object.__new__(cls, fn)
+nt_format = namedtuple('nt_format', 'renderer content_type')
 
-    def __init__(self, fn=None):
-        self.fn = fn
-        self.modifiers = [self]
-        self.__name__ = fn.__name__
 
-    def __get__(self, obj, cls=None):
-        self._obj = obj
-        self._cls = cls
+class BaseRenderer(object):
+    def __eq__(self, content_type):
+        return Format(self, content_type)
 
-        if not obj:
-            return types.UnboundMethodType(self, None, cls)
+    def __repr__(self):
+        return "<%s()>" % type(self).__name__
 
-        return types.MethodType(self, obj, cls)
 
-    def __call__(self, *args, **kwargs):
-        modifiers = self.modifiers
-        fn = self.fn
+class BulkRenderer(list, BaseRenderer):
+    def render(self, controller, data):
+        for i in self:
+            data = i.render(controller, data)
+        return data
 
-        result = fn(*args, **kwargs)
-        for modifier in modifiers:
-            # Make sure we don't call modifiers twice
-            if (modifier not in self.modifiers or
-                    modifiers is self.modifiers):
-                result = modifier.call(result)
+    def __repr__(self):
+        return "<BulkRenderer([%s])>" % ', '.join(map(repr, self))
+
+
+class Format(list, BaseRenderer):
+    def __init__(self, renderer, content_type='*/*'):
+        if not isinstance(content_type, ContentType):
+            content_type = ContentType(content_type)
+        self.append(nt_format(renderer, content_type))
+
+    def __or__(self, other):
+        if isinstance(other, Format):
+            for i in other:
+                self.append(nt_format(i.renderer, i.content_type))
+        else:
+            self.append(nt_format(other[0], other[1]))
+        return self
+
+    def __repr__(self):
+        return "<Format[%s]>" % ', '.join(map(repr, self))
+
+    @property
+    def content_types(self):
+        result = []
+        for i in self:
+            result.append(i.content_type)
         return result
 
-    def call(self, result):
-        pass
+    def get_by_content_type(self, content_type):
+        for i in self:
+            if i.content_type == content_type:
+                return i.renderer
+        raise IndexError("Could not find content_type: %s" % content_type)
 
-    @property
-    def obj(self):
+    def render(self, controller, data):
+        content_types = self.content_types
         try:
-            return self._obj
-        except AttributeError:
-            return self.fn.obj
+            priority = (controller.request.accepted.filter(content_types)
+                .get_highest_priority()).value
+        except IndexError:
+            priority = self[0].content_type
+        renderer = self.get_by_content_type(priority)
 
-    @property
-    def cls(self):
-        try:
-            return self._cls
-        except AttributeError:
-            return self.fn.cls
-
-    @property
-    def app(self):
-        return self.obj.app
-
-    @property
-    def request(self):
-        return self.obj.request
-
-    @property
-    def response(self):
-        return self.obj.response
-
-    def data(self):
-        return self.fn(self.obj)
+        return renderer.render(controller, data)
 
 
-def view(template):
-    class View(ViewDecorator):
-        def call(self, body):
-            return self.response.render(template, body)
-    return View
+class Template(BaseRenderer):
+    def __init__(self, template_path):
+        self.template_path = template_path
+
+    def __repr__(self):
+        return "<Template(%s)>" % self.template_path
+
+    def render(self, controller, data):
+        app = controller.app
+        return app.engine.render(self.template_path, data)
 
 
-def json():
-    class Json(ViewDecorator):
-        def call(self, body):
-            self.response.headers['Content-Type'] = 'application/json'
-            return dump_json(body)
-    return Json
+class Json(BaseRenderer):
+    def render(self, controller, data):
+        controller.response.type = 'application/json'
+        return dump_json(data)
 
 
-def format(type_):
-    class Format(object):
-        def __init__(self, fn):
-            self.types = {
-                type_: fn
-            }
-            self.fn = fn
-            self.__name__ = fn.__name__
-
-        def __get__(self, obj, cls=None):
-            self.obj = obj
-            self.cls = cls
-
-            if not obj:
-                return types.UnboundMethodType(self, None, cls)
-
-            return types.MethodType(self, obj, cls)
-
-        def __call__(self, *args, **kwargs):
-            use_type = self.obj.request.accepted.filter(self.types.keys()).get_highest_priority()
-            fn = self.types[str(use_type)] if use_type else self.fn
-            fn._obj = self.obj
-
-            return fn(*args, **kwargs)
-
-        def call(self, body):
-            return body
-
-        def add_type(self, type_):
-            def wrapper(fn):
-                self.types[type_] = fn
-                return self
-            return wrapper
-
-    return Format
+class Compress(BaseRenderer):
+    def render(self, controller, data):
+        if 'accept_encoding' in controller.request.headers:
+            if ('deflate' in
+                    controller.request.headers.accept_encoding.split(',')):
+                try:
+                    compressed = zlib.compress(data)
+                except TypeError:
+                    pass
+                else:
+                    controller.response.headers['Content-Encoding'] = 'deflate'
+                    controller.response.headers['Content-Length'] = str(len(compressed))
+                    return compressed
+        return data

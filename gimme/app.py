@@ -6,13 +6,14 @@ from .wsgi import WSGIAdapter
 from .servers.http import HTTPServer
 from .servers.logger import SysLogger
 from .middleware import connection_helper
+from .engines import Jinja2Engine
 
 
 class App(object):
-    def __init__(self, name='gimme', logger=SysLogger):
+    def __init__(self, name='gimme', engine=Jinja2Engine(), logger=SysLogger):
         self.logger = logger(name)
         self.routes = Routes(self)
-        self.engines = {}
+        self.engine = engine
 
         self._middleware = []
         self.__wsgi = WSGIAdapter(self)
