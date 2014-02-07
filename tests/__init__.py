@@ -5,3 +5,4 @@ from . import headers
 from . import uri
 from . import dotdict
 from . import middleware
+from . import controller
