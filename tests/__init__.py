@@ -6,3 +6,4 @@ from . import uri
 from . import dotdict
 from . import middleware
 from . import controller
+from . import renderers

@@ -2,67 +2,94 @@ import unittest
 import gimme
 from gimme.controller import Controller, ControllerMethod, MethodRenderer
 from gimme.engines import Jinja2Engine
-from gimme.renderers import Format, BulkRenderer, Template, Json
+from gimme.renderers import Format, BulkRenderer, Template, Json, Compress
 from test_helpers import make_environ
 from jinja2 import Environment, DictLoader
 
 
-class ControllerTest(unittest.TestCase):
+class ControllerSetUp(object):
     def setUp(self):
         class TestController(Controller):
-            def string(self):
-                return "Awesome!"
+            def index(self):
+                return {'this': 'is test data'}
 
-            def dictionary(self):
-                return {"this": "is a dictionary"}
-
+        self.engine = Jinja2Engine(environment=
+            Environment(loader=DictLoader({
+                'index.html': 'this is a test. {{this}}'
+            }))
+        )
+        self.app = gimme.App(engine=self.engine)
         self.TestController = TestController
-        self.environment = Environment(loader=DictLoader({
-            'test.html': "ZOMG, this is a test! this = {{this}}"
-        }))
-        self.app = gimme.App(engine=Jinja2Engine(environment=self.environment))
-        self.app.routes.get('/string', TestController.string)
-        self.app.routes.get('/dictionary', TestController.dictionary.json())
 
-    def get_request_response(self, *args, **kwargs):
-        return self.app.routes.match(make_environ(*args, **kwargs))
 
-    def instantiate_controller(self, request, response):
-        return self.TestController(self.app, request, response)
+class ControllerTest(ControllerSetUp, unittest.TestCase):
+    def test_meta_modifications(self):
+        assert isinstance(self.TestController.index, ControllerMethod)
 
-    def test_controller_method_creation(self):
-        assert isinstance(self.TestController.string, ControllerMethod)
 
-    def test_method_renderer_creation(self):
-        method_renderer = self.TestController.dictionary + 'something.html'
-        assert isinstance(method_renderer, MethodRenderer)
+class ControllerMethodTest(ControllerSetUp, unittest.TestCase):
+    def test_add(self):
+        json_renderer = self.TestController.index + Json()
+        template_renderer = self.TestController.index + Template('something')
+        string_renderer = self.TestController.index + 'something'
+
+        assert isinstance(json_renderer, MethodRenderer)
+        assert isinstance(template_renderer, MethodRenderer)
+        assert isinstance(string_renderer, MethodRenderer)
+
+    def test_template(self):
+        assert isinstance(self.TestController.index.json(), MethodRenderer)
+        assert isinstance(self.TestController.index.template('something'),
+            MethodRenderer)
+        assert isinstance(self.TestController.index.compress(), MethodRenderer)
+
+    def test_eq(self):
+        format_ = self.TestController.index == 'text/html'
+        assert isinstance(format_, Format)
+
+    def test_call(self):
+        instantiated_controller = self.TestController(None, None, None)
+        result = self.TestController.index()
+        assert result['this'] == 'is test data'
+
+
+class MethodRendererTest(ControllerSetUp, unittest.TestCase):
+    def setUp(self):
+        ControllerSetUp.setUp(self)
+
+        self.method_renderer = self.TestController.index + 'index.html'
+
+    def check_for_renderer(self, renderer):
+        for i in self.method_renderer[1:]:
+            if isinstance(i, renderer):
+                return True
+        return False
+
+    def test_add(self):
+        self.method_renderer + Compress()
+
+        assert self.check_for_renderer(Compress), (
+            "Compress object did not get added to method_renderer")
+
+    def test_compress(self):
+        self.method_renderer.compress()
+
+        assert self.check_for_renderer(Compress), (
+            "Compress object did not get added to method_renderer")
+
+    def test_template(self):
+        self.method_renderer.template('something')
+
+        assert self.check_for_renderer(Template), (
+            "Template object did not get added to method_renderer")
 
     def test_json(self):
-        controller = self.instantiate_controller(
-            *self.get_request_response('/dictionary'))
-        json = self.TestController.dictionary.json()
-        assert json() == '{"this": "is a dictionary"}'
-        assert isinstance(json, MethodRenderer)
+        self.method_renderer.json()
 
-    def test_format_creation(self):
-        '''
-        This should be split into several tests and really doesn't belong in
-        this test case.
-        '''
-        controller = self.instantiate_controller(
-            *self.get_request_response('/dictionary'))
+        assert self.check_for_renderer(Json), (
+            "Json object did not get added to method_renderer")
 
-        template = Template('test.html') == 'text/html'
-        json = Json() == 'application/json'
-
-        method_renderer = self.TestController.dictionary + (
-            template | json
-        )
-
-        assert isinstance(template, Format)
-        assert isinstance(json, Format)
-        assert isinstance(method_renderer, MethodRenderer)
-        assert template.render(controller, {'this': 'things'}) == (
-            'ZOMG, this is a test! this = things')
-        assert json.render(controller, {'this': 'things'}) == (
-            '{"this": "things"}')
+    def test_call(self):
+        # Need to instantiate the controller before templates can be rendered
+        controller = self.TestController(self.app, None, None)
+        assert self.method_renderer() == 'this is a test. is test data'
