@@ -1,10 +1,10 @@
 import traceback
 import time
 import datetime
-import contextlib
 import mimetypes
 import re
 import sys
+from contextlib import nested
 from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 from .controller import ErrorController
@@ -21,6 +21,7 @@ class Response(object):
         self.route = route
         self.request = request
         self._status = StatusCode('200 OK')
+        self._aborted = False
 
         try:
             self.headers = ResponseHeaders(dict(app.get('default headers')))
@@ -42,15 +43,6 @@ class Response(object):
     def status(self, status):
         self._status.set(status)
 
-    def _make_next(self, i, fn, method, next_fns):
-        if fn is method:
-            def next_():
-                self.body = fn()
-        else:
-            def next_():
-                fn(self.request, self, next_fns[i-1])
-        return next_
-
     def _render(self, middleware=None):
         if self._controller_class:
             controller = self._controller_class(self.app, self.request, self)
@@ -60,19 +52,25 @@ class Response(object):
             def method():
                 return self.route.method
 
-
         if middleware is None:
-            middleware = (self.app._middleware + self.route.middleware
-                + [method])
+            middleware = (self.app._middleware + self.route.middleware)
         elif not middleware:
-            middleware = [method]
+            middleware = []
 
-        next_fns = []
+        instantiated_middleware = self._instantiate_middleware(middleware)
 
-        for i, fn in enumerate(list(reversed(middleware))):
-            next_fns.append(self._make_next(i, fn, method, next_fns))
+        with nested(*instantiated_middleware):
+            try:
+                if not self._aborted:
+                    self.body = method()
+            except gimme.errors.AbortRender:
+                self._aborted = True
 
-        next_fns[-1]()
+    def _instantiate_middleware(self, middleware):
+        result = []
+        for i in middleware:
+            result.append(i(self.app, self.request, self))
+        return result
 
     def set(self, key, value):
         self.headers[key] = value

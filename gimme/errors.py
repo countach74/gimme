@@ -28,6 +28,10 @@ class MultipartError(GimmeError):
     pass
 
 
+class AbortRender(GimmeError):
+    pass
+
+
 class HTTPError(GimmeError):
     def __init__(self, status=500):
         self.status = StatusCode(status)

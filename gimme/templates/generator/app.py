@@ -6,7 +6,6 @@ import routes
 
 app = gimme.App()
 
-app.use(gimme.middleware.jinja2())
 app.use(gimme.middleware.compress())
 app.use(gimme.middleware.static('public'))
 app.use(gimme.middleware.method_override())
