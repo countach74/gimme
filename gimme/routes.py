@@ -11,17 +11,41 @@ class PatternMatch(object):
         self.match = match
 
 
-class Pattern(object):
+class RouteList(list):
+    def __init__(self, data=[]):
+        for i in data:
+            if isinstance(i, Route):
+                self.append(i)
+            else:
+                self.append(Route(i))
+
+    def __repr__(self):
+        return "<RouteList([%s])>" % ', '.join(map(repr, self))
+
+    def __or__(self, other):
+        self.append(other)
+        return self
+
+    def match(self, uri):
+        for i in self:
+            match = i.match(uri)
+            if match:
+                return match
+        return None
+
+
+class Route(object):
     __sub_pattern = re.compile(':([a-zA-Z_\-0-9]+)(\?)?')
     __sub_last_pattern = re.compile('\/:([a-zA-Z_\-0-9]+)(\?)?$')
 
-    def __init__(self, route, regex):
-        self.route = route
-
+    def __init__(self, regex):
         if isinstance(regex, str):
             self._regex = self._make_regex(regex)
         else:
             self._regex = regex
+
+    def __repr__(self):
+        return "<Route(%s)>" % self._regex.pattern
 
     def match(self, uri):
         match = self._regex.match(uri)
@@ -45,11 +69,20 @@ class Pattern(object):
         pattern = '^%s$' % self.__sub_pattern.sub(handle_replace, pattern)
         return re.compile(pattern)
 
+    def __or__(self, other):
+        return RouteList([self, other])
 
-class Route(object):
+
+class RouteMapping(object):
     def __init__(self, routes, pattern, middleware, method, match_fn=None):
         self.routes = routes
-        self.pattern = Pattern(self, pattern)
+
+        if isinstance(pattern, (list, tuple)):
+            pattern = RouteList(pattern)
+        else:
+            pattern = Route(pattern)
+
+        self.pattern = pattern
         self.middleware = middleware
         self.method = method
         self.match_fn = match_fn
@@ -75,8 +108,8 @@ class Routes(object):
         self.__delete = []
         self.__all = []
 
-        self.http404 = Route(self, '*', [], ErrorController.http404)
-        self.http500 = Route(self, '*', [], ErrorController.http500)
+        self.http404 = RouteMapping(self, '*', [], ErrorController.http404)
+        self.http500 = RouteMapping(self, '*', [], ErrorController.http500)
 
     def _add(self, routes_list, pattern, *args, **kwargs):
         middleware = list(args[:-1])
@@ -85,7 +118,7 @@ class Routes(object):
             method = args[-1]
         except IndexError, e:
             raise errors.RouteError("No controller method specified.")
-        routes_list.append(Route(self, pattern, middleware, method, fn))
+        routes_list.append(RouteMapping(self, pattern, middleware, method, fn))
 
     def get(self, pattern, *args, **kwargs):
         self._add(self.__get, pattern, *args, **kwargs)
