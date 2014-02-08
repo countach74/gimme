@@ -5,12 +5,6 @@ from jinja2 import Environment, PackageLoader, FileSystemLoader, ChoiceLoader
 
 class BaseEngine(object):
     pass
-    '''
-    def get_template(self, template):
-        def render(data):
-            return self.render(template, data)
-        return render
-    '''
 
 
 class Jinja2Engine(BaseEngine):

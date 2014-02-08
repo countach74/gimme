@@ -3,7 +3,7 @@ import traceback
 import types
 from jinja2 import Environment, PackageLoader
 
-from renderers import (
+from .renderers import (
     BaseRenderer,
     Template,
     Json,
@@ -144,8 +144,3 @@ class ErrorController(Controller):
         return self.environment.get_template('errors/generic.html').render({
             'status': self.response._status
         })
-
-
-class Poo(Controller):
-    def poo(self):
-        return {'this': 'is awesome!'}
