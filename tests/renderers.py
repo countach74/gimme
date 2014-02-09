@@ -1,5 +1,6 @@
 import unittest
 import zlib
+import json
 from jinja2 import Environment, DictLoader
 import gimme
 from gimme.engines import Jinja2Engine
@@ -53,7 +54,7 @@ class JsonTest(RendererSetUp, unittest.TestCase):
     def test_render(self):
         renderer = Json()
         assert renderer.render(self.controller,
-            self.controller.index() == '{"this": "is test data."}')
+            self.controller.index()) == '{"this": "is test data."}'
         assert self.response.type == 'application/json'
 
 
@@ -99,3 +100,14 @@ class FormatTest(RendererSetUp, unittest.TestCase):
 
         assert html_response.type == 'text/html; charset=UTF-8'
         assert json_response.type == 'application/json'
+
+
+class BulkRendererTest(RendererSetUp, unittest.TestCase):
+    def test_render(self):
+        renderer = BulkRenderer([Json(), Compress()])
+        compressed = zlib.compress(json.dumps(self.controller.index()))
+
+        assert renderer.render(self.controller,
+            self.controller.index()) == compressed
+        assert self.response.type == 'application/json'
+        assert self.response.headers['Content-Encoding'] == 'deflate'
