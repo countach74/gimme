@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #
 # Gimme documentation build configuration file, created by
-# sphinx-quickstart on Sat Feb  8 22:28:28 2014.
+# sphinx-quickstart on Sat Feb  8 22:38:52 2014.
 #
 # This file is execfile()d with the current directory set to its containing dir.
 #
@@ -243,4 +243,7 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': ('http://docs.python.org/', None),
+    'jinja2': ('http://jinja.pocoo.org/docs/', None)
+}
