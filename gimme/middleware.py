@@ -130,7 +130,7 @@ def session(cache='gimme.cache.memory', session_cookie='gimme_session',
             try:
                 key = self.request.cookies[session_cookie]
             except KeyError:
-                return self._create_session(self.response)
+                return self._create_session()
 
             session_data = region.get(key)
 
