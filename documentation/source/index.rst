@@ -64,6 +64,26 @@ should NEVER start with _*
 
 Engines
 -------
+Gimme makes it very easy to implement adapters to interface with your favorite
+template engine (I call these adapters "engines", terminology taken from
+Express JS).
+
+All that is needed is to subclass of the :class:`gimme.engines.BaseEngine`
+(abstract base) class and implement the :meth:`render` method.
+
+Example::
+
+    class SomeEngine(gimme.engines.BaseEngine):
+        def render(self, template, data):
+            return fetch_template(template, data)
+
+Now, to use your new engine, simply pass it to your app on instantiation::
+
+    app = App(engine=SomeEngine())
+
+.. autoclass:: gimme.engines.BaseEngine
+   :members:
+
 .. autoclass:: gimme.engines.Jinja2Engine
    :members:
 
