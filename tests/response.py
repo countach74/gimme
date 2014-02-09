@@ -84,5 +84,4 @@ class ResponseTest(unittest.TestCase):
             'REQUEST_METHOD': 'GET'
         })
         response._render()
-        print response.body
         assert response.body == "this is a text response"

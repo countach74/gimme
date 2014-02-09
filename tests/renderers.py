@@ -19,6 +19,7 @@ class RendererSetUp(object):
             def index(self):
                 return {'this': 'is test data.'}
 
+        self.TestController = TestController
         self.engine = Jinja2Engine(environment=
             Environment(loader=DictLoader({
                 'index.html': 'this is a test. {{this}}'
@@ -63,3 +64,38 @@ class CompressTest(RendererSetUp, unittest.TestCase):
         assert renderer.render(self.controller,
             str(self.controller.index())) == compressed_data
         assert self.response.headers['Content-Encoding'] == 'deflate'
+
+
+class FormatTest(RendererSetUp, unittest.TestCase):
+    def test_render(self):
+        html_renderer = Format(Template('index.html'), 'text/html')
+        json_renderer = Format(Json(), 'application/json')
+
+        html_request, html_response = self.app.routes.match({
+            'PATH_INFO': '/',
+            'REQUEST_METHOD': 'GET',
+            'HTTP_ACCEPT': 'text/html'
+        })
+
+        json_request, json_response = self.app.routes.match({
+            'PATH_INFO': '/',
+            'REQUEST_METHOD': 'GET',
+            'HTTP_ACCEPT': 'application/json'
+        })
+
+        html_controller = self.TestController(self.app, html_request,
+            html_response)
+
+        json_controller = self.TestController(self.app, json_request,
+            json_response)
+
+        assert html_renderer.render(
+            html_controller, html_controller.index()) == (
+            'this is a test. is test data.')
+
+        assert json_renderer.render(
+            json_controller, json_controller.index()) == (
+            '{"this": "is test data."}')
+
+        assert html_response.type == 'text/html; charset=UTF-8'
+        assert json_response.type == 'application/json'
