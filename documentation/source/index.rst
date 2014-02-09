@@ -78,6 +78,22 @@ The Routing System
 .. autoclass:: gimme.routes.RouteList
    :members:
 
+Sessions
+--------
+
+If :func:`gimme.middleware.session` is in use, a session object is made
+available at :attr:`Request.session`. Typical usage is something like::
+
+    class SomeController(gimme.Controller):
+        def some_method(self):
+            if 'user_name' not in self.request.session:
+                self.request.session['user_name'] = get_user_name()
+            return {'user_name': self.request.session['user_name']}
+
+.. autoclass:: gimme.ext.session.Session
+   :members:
+   :special-members:
+
 Engines
 -------
 Gimme makes it very easy to implement adapters to interface with your favorite

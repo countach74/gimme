@@ -12,6 +12,27 @@ class PatternMatch(object):
 
 
 class RouteList(list):
+    '''
+    A subclass of :func:`list` that maintains the same general interface of
+    :class:`Route <gimme.routes.Route>`.
+
+    Typically, a ``RouteList`` is created by ``|`` two :class:`Route
+    <gimme.routes.Route>` objects together::
+
+        route_list = Route('/somewhere/:param1') | Route('/other/:param1')
+
+    Additional routes can be added by ``|`` more :class:`Route
+    <gimme.routes.Route>` objects to the ``RouteList``::
+
+        route1 = Route('/somewhere/:param1')
+        route2 = Route('/somewhere_else/:param1')
+        route3 = Route('/another_place/:param1')
+        route_list = route1 | route2 | route3
+
+    Alternatively, conventional instantiation can be used::
+
+        route_list = RouteList([route1, route2, route3])
+    '''
     def __init__(self, data=[]):
         for i in data:
             if isinstance(i, Route):

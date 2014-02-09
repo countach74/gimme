@@ -81,6 +81,18 @@ class NotifiedList(list, NotifiedMixin):
 
 
 class Session(object):
+    '''
+    The base session interface for Gimme. Designed to behave very much like a
+    normal :func:`dict`.
+
+    :param cache: The dogpile cache region to store to.
+    :param key: A unique identifier for the session.
+    :param data: A dictionary of data to start with.
+    :param new: Whether or not the session is new or not (affects whether or
+        not the session data will be stored, regardless of anything being in
+        the data dictionary).
+    '''
+
     def __init__(self, cache, key, data={}, new=False):
         self._cache = cache
         self._key = key
@@ -91,25 +103,58 @@ class Session(object):
             self._state.dirty()
 
     def __contains__(self, key):
+        '''
+        Checks if ``key`` is in the session.
+
+        :param key: The key to check for.
+        :return: ``True/False`` depending if the key is found.
+        '''
         return key in self._data
 
     def __getitem__(self, key):
+        '''
+        Fetches ``key`` from session.
+
+        :param key: The key to fetch.
+        :return: The item from the session.
+        '''
         return self._data[key]
 
     def __setitem__(self, key, value):
+        '''
+        Sets ``key`` in session to ``value``.
+
+        :param key: The key to set.
+        :param value: The value to set it to.
+        '''
         self._data[key] = value
 
     def __repr__(self):
         return "Session(%s)" % (self._key)
 
     def get(self, *args, **kwargs):
+        '''
+        Fetches a key from the session. Works just like
+        :meth:`dict.get`. In fact, this method simply calls
+        :meth:`dict.get`.
+        '''
         return self._data.get(*args, **kwargs)
 
     def save(self):
+        '''
+        Save the session to whichever backend has been selected.
+        '''
         self._cache.set(self._key, dict(self._data))
 
     def touch(self):
+        '''
+        Actually, this just calls :meth:`save
+        <gimme.ext.session.Session.save>`.
+        '''
         self._cache.save()
 
     def destroy(self):
+        '''
+        Removes the session from the cache backend.
+        '''
         self._cache.delete(self._key)
