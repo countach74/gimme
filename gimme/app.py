@@ -31,14 +31,18 @@ class App(object):
         # Start the app's development web server.
         app.listen()
 
-    :ivar dirname: Stores the path information from where the app was started
-        from.
-    :ivar routes: An instance of :class:`gimme.routes.Routes`, which is used
-        for mapping routes to controllers, etc.
-
     :param str name: The name to use for the app in the logger.
     :param engine: The template engine adapter to use.
     :param logger: The log class to use.
+
+    .. attribute:: routes
+
+        An instance of :class:`gimme.routes.Routes`, which is used for
+        mapping routes to controllers, etc.
+
+    .. attribute:: dirname
+
+        Stores the path information from where the app was started from.
     '''
 
     def __init__(self, name='gimme', engine=Jinja2Engine(), logger=SysLogger):

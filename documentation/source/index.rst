@@ -62,6 +62,22 @@ should NEVER start with _*
 .. autoclass:: gimme.response.Response
    :members:
 
+The Routing System
+------------------
+
+.. autoclass:: gimme.routes.Routes
+   :members:
+
+.. autoclass:: gimme.routes.RouteMapping
+   :members:
+
+.. autoclass:: gimme.routes.Route
+   :members:
+   :special-members:
+
+.. autoclass:: gimme.routes.RouteList
+   :members:
+
 Engines
 -------
 Gimme makes it very easy to implement adapters to interface with your favorite

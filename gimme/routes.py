@@ -35,6 +35,13 @@ class RouteList(list):
 
 
 class Route(object):
+    '''
+    A common interface for creating and matching route patterns.
+
+    :param regex: Either a string with optional URI parameters (such as
+        ``/somewhere`` or ``/somewhere/:param1``), or a regex as created with
+        :func:`re.compile`. 
+    '''
     __sub_pattern = re.compile(':([a-zA-Z_\-0-9]+)(\?)?')
     __sub_last_pattern = re.compile('\/:([a-zA-Z_\-0-9]+)(\?)?$')
 
@@ -48,6 +55,16 @@ class Route(object):
         return "<Route(%s)>" % self._regex.pattern
 
     def match(self, uri):
+        '''
+        Tests if the compiled regex pattern matches ``uri``. If it does, an
+        instance of :class:`PatternMatch <gimme.routes.PatternMatch>` is
+        returned; else ``None``.
+
+        :param uri: The URI to test the regex against.
+        :return: Either an instance of :class:`PatternMatch
+            <gimme.routes.PatternMatch>` if a match is found or ``None`` if
+            no match.
+        '''
         match = self._regex.match(uri)
         return PatternMatch(self, match) if match else None
 
@@ -70,10 +87,39 @@ class Route(object):
         return re.compile(pattern)
 
     def __or__(self, other):
+        '''
+        Create a :class:`RouteList <gimme.routes.RouteList>` object with
+        ``self`` and ``other`` in it.
+
+        :param other: Another instance of ``Route``.
+        :return: An instance of :class:`RouteList <gimme.routes.RouteList>`.
+        '''
         return RouteList([self, other])
 
 
 class RouteMapping(object):
+    '''
+    Maps a :class:`Route <gimme.routes.Route>` object to a
+    :class:`ControllerMethod <gimme.controller.ControllerMethod>` object.
+
+    ``RouteMapping`` objects are generally created by interacting with an
+    :class:`application's <gimme.app.App>` :attr:`routes` attribute. For
+    example, the following adds a ``RouteMapping`` to an application::
+
+        app.routes.get('/somewhere', SomeController.some_method)
+
+    :param routes: An instance of :class:`gimme.routes.Routes`.
+    :param pattern: Either a string to instantiate a :class:`Route
+        <gimme.routes.Route>` with, a :class:`Route <gimme.routes.Route>`,
+        or a :class:`RouteList <gimme.routes.RouteList>`.
+    :param middleware: A list of middleware.
+    :param method: An instance of :class:`ControllerMethod
+        <gimme.controller.ControllerMethod>`.
+    :param match_fn: A callable that can be used to evaluate a match. The
+        callable should receive two parameters: ``uri`` and ``environ``, which
+        correspond to the URI being matched and the WSGI environ dict,
+        respectively.
+    '''
     def __init__(self, routes, pattern, middleware, method, match_fn=None):
         self.routes = routes
 
@@ -88,6 +134,14 @@ class RouteMapping(object):
         self.match_fn = match_fn
 
     def match(self, environ):
+        '''
+        Test to see if a WSGI environ dict matches the pattern. If it does,
+        a :class:`PatternMatch <gimme.routes.PatternMatch>` object is
+        returned.
+
+        :return: An instance of :class:`PatternMatch
+            <gimme.routes.PatternMatch>` or ``None``.
+        '''
         uri = environ[self.routes.match_param]
 
         if not self.match_fn or (self.match_fn and
@@ -96,6 +150,27 @@ class RouteMapping(object):
 
 
 class Routes(object):
+    '''
+    Manage routes for an application.
+
+    :param app: The Gimme application.
+    :param match_param: The WSGI environ variable to use for matching.
+    :param strip_trailing_slash: Whether or not trailing slashes should be
+        stripped away pre-matching or not. If true, ``/somewhere/`` and
+        ``/somewhere`` are equivalent.
+
+    .. attribute:: http404
+
+        A :class:`RouteMapping <gimme.routes.RouteMapping>` pointing to
+        :meth:`ErrorController.http404 <gimme.controller.ErrorController.http404>`
+
+    .. attribute:: http500
+
+        A :class:`RouteMapping <gimme.routes.RouteMapping>` pointing to
+        :meth:`ErrorController.http500 <gimme.controller.ErrorController.http500>`
+
+    '''
+
     def __init__(self, app, match_param='PATH_INFO',
             strip_trailing_slash=True):
         self.app = app
@@ -121,18 +196,80 @@ class Routes(object):
         routes_list.append(RouteMapping(self, pattern, middleware, method, fn))
 
     def get(self, pattern, *args, **kwargs):
+        '''
+        Add a route that responds only to GET requests.
+
+        The ``pattern`` parameter receives various object types. In its
+        simplest form, the pattern may look something like this::
+
+            app.get('/somewhere/:param1', SomeController.some_method)
+
+        Also, a :class:`Route <gimme.routes.Route>` object can be passed::
+
+            app.get(Route('/somewhere/:param1', SomeController.some_method)
+
+        The advantage to passing a Route object is that Route objects can be
+        ``|``'d together, allowing mapping several routes at once to a given
+        controller method. For example::
+
+            route1 = Route('/somewhere/:param1')
+            route2 = Route('/somewhere_else/:param1')
+
+            app.get(route1 | route2, SomeController.some_method)
+
+        The above creates a :class:`RouteList <gimme.routes.RouteList>`
+        object.
+
+        Every other parameter other than ``pattern`` is variable, depending
+        on order. In the examples above, the second parameter is an instance
+        of :class:`ControllerMethod <gimme.controller.ControllerMethod>`.
+        However, middleware can be assigned in between the ``pattern`` and the
+        :class:`ControllerMethod <gimme.controller.ControllerMethod>` like
+        so::
+
+            app.get('/somewhere/:param1', YourMiddleware,
+                SomeController.some_method)
+
+        :param pattern: Either a string that can be instantiated to a
+            :class:`Route <gimme.routes.Route>` object, a :class:`Route
+            <gimme.routes.Route>` object, or a :class:`RouteList
+            <gimme.routes.RouteList>` object.
+        :param fn: A callable that is passed to the
+            :class:`RouteMapping <gimme.routes.RouteMapping>` object's
+            constructor via the ``match_fn`` parameter.
+        '''
         self._add(self.__get, pattern, *args, **kwargs)
 
     def post(self, pattern, *args, **kwargs):
+        '''
+        Add a route that responds only to POST requests.
+
+        Please reference :meth:`gimme.routes.Routes.get` for more information.
+        '''
         self._add(self.__post, pattern, *args, **kwargs)
 
     def put(self, pattern, *args, **kwargs):
+        '''
+        Add a route that responds only to PUT requests.
+
+        Please reference :meth:`gimme.routes.Routes.get` for more information.
+        '''
         self._add(self.__put, pattern, *args, **kwargs)
 
     def delete(self, pattern, *args, **kwargs):
+        '''
+        Add a route that responds only to DELETE requests.
+
+        Please reference :meth:`gimme.routes.Routes.get` for more information.
+        '''
         self._add(self.__delete, pattern, *args, **kwargs)
 
     def all(self, pattern, *args, **kwargs):
+        '''
+        Add a route that responds to all request types.
+
+        Please reference :meth:`gimme.routes.Routes.get` for more information.
+        '''
         self._add(self.__all, pattern, *args, **kwargs)
 
     def _find_match(self, environ, match_list):
@@ -144,6 +281,21 @@ class Routes(object):
                 return (request, response)
 
     def match(self, environ):
+        '''
+        Find a matching route, if any, and create :class:`Request
+        <gimme.request.Request>` and :class:`Response
+        <gimme.response.Response>` objects. If no match is found, then the
+        objects returned will resolve to the :attr:`Routes.http404
+        <gimme.routes.Routes.http404>` attribute.
+
+        :param environ: A WSGI environ dictionary or something similar that
+            can be used for matching. Should contain at least
+            ``REQUEST_METHOD`` and whichever ``match_param`` was passed to the
+            ``Routes`` object (defaults to ``PATH_INFO``).
+
+        :return: A tuple of :class:`Request <gimme.request.Request>` and
+            :class:`Response <gimme.response.Response>` objects.
+        '''
         request_methods = {
             'GET': self.__get,
             'POST': self.__post,
