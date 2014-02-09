@@ -36,6 +36,7 @@ class CustomMiddleware(gimme.middleware.Middleware):
   def exit(self):
     # Do important things here *after* the controller method has
     # been called.
+    pass
 
 
 app = gimme.App()
