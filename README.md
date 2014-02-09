@@ -1,7 +1,7 @@
 Gimme
 =====
 
-An ExpressJS-like web framework for Python.
+A Python web framework that is very loosely based on Express JS.
 
 Gimme's API is essentially a Pythonified version of Express (although
 not asynchronous in nature). For example, a very simple application
@@ -23,24 +23,20 @@ class RootController(gimme.Controller):
     return {'some data': 'hello, world!'}
     
     
-# Middleware is implemented exactly as it is in Express, although
-# because of the differences between Python and JavaScript,
-# if you need to pass parameters to middleware upon initialization,
-# you should probably create a class (with __call__() method)
-# instead of a standard function.
-def custom_middleware(request, response, next_):
-  request.some_property = {'databases': 'are useful'}
-  next_()
-  
-# Or, as a class:
-class CustomMiddleware(object):
-  def __init__(self, param1):
-    self.param1 = param1
+# While middleware serves the same general purpose as it does in
+# Express, it is implemented quite differently in Gimme.
+class CustomMiddleware(gimme.middleware.Middleware):
+  def enter(self):
+    # Do important things here *before* the controller method
+    # is called. Oh, by the way, middleware has access to the
+    # Gimme application, the current request, and current response
+    # via self.app, self.request, and self.response, respectively.
+    pass
     
-  def __call__(self, request, response, next_):
-    request.some_property = {'something': self.param1}
-    next_()
-      
+  def exit(self):
+    # Do important things here *after* the controller method has
+    # been called.
+
 
 app = gimme.App()
 
@@ -67,11 +63,7 @@ app.get('/alternate', RootController.index + (
 app.get('/json', RootController.index.json())
 
 # Apply CustomMiddleware to a specific route
-app.get('/route_middleware', custom_middleware, RootController.index)
-
-app.set('default headers', {
-  'Content-Type': 'text/html'
-})
+app.get('/route_middleware', CustomMiddleware, RootController.index)
 
 
 if __name__ == '__main__':
