@@ -129,7 +129,6 @@ class RouteMapping(object):
 
         app.routes.get('/somewhere', SomeController.some_method)
 
-    :param routes: An instance of :class:`gimme.routes.Routes`.
     :param pattern: Either a string to instantiate a :class:`Route
         <gimme.routes.Route>` with, a :class:`Route <gimme.routes.Route>`,
         or a :class:`RouteList <gimme.routes.RouteList>`.
@@ -141,9 +140,7 @@ class RouteMapping(object):
         correspond to the URI being matched and the WSGI environ dict,
         respectively.
     '''
-    def __init__(self, routes, pattern, middleware, method, match_fn=None):
-        self.routes = routes
-
+    def __init__(self, pattern, middleware, method, match_fn=None):
         if isinstance(pattern, (list, tuple)):
             pattern = RouteList(pattern)
         else:
@@ -154,16 +151,19 @@ class RouteMapping(object):
         self.method = method
         self.match_fn = match_fn
 
-    def match(self, environ):
+    def match(self, environ, match_param='PATH_INFO'):
         '''
         Test to see if a WSGI environ dict matches the pattern. If it does,
         a :class:`PatternMatch <gimme.routes.PatternMatch>` object is
         returned.
 
+        :param environ: A WSGI environ dict to match against.
+        :param match_param: The parameter from the environ dict to consider
+            the base URI.
         :return: An instance of :class:`PatternMatch
             <gimme.routes.PatternMatch>` or ``None``.
         '''
-        uri = environ[self.routes.match_param]
+        uri = environ[match_param]
 
         if not self.match_fn or (self.match_fn and
                 self.match_fn(uri, environ)):
@@ -204,8 +204,8 @@ class Routes(object):
         self.__delete = []
         self.__all = []
 
-        self.http404 = RouteMapping(self, '*', [], ErrorController.http404)
-        self.http500 = RouteMapping(self, '*', [], ErrorController.http500)
+        self.http404 = RouteMapping('*', [], ErrorController.http404)
+        self.http500 = RouteMapping('*', [], ErrorController.http500)
 
     def _add(self, routes_list, pattern, *args, **kwargs):
         middleware = list(args[:-1])
@@ -214,7 +214,7 @@ class Routes(object):
             method = args[-1]
         except IndexError, e:
             raise errors.RouteError("No controller method specified.")
-        routes_list.append(RouteMapping(self, pattern, middleware, method, fn))
+        routes_list.append(RouteMapping(pattern, middleware, method, fn))
 
     def get(self, pattern, *args, **kwargs):
         '''
@@ -227,7 +227,7 @@ class Routes(object):
 
         Also, a :class:`Route <gimme.routes.Route>` object can be passed::
 
-            app.get(Route('/somewhere/:param1', SomeController.some_method)
+            app.get(Route('/somewhere/:param1'), SomeController.some_method)
 
         The advantage to passing a Route object is that Route objects can be
         ``|``'d together, allowing mapping several routes at once to a given
@@ -295,7 +295,7 @@ class Routes(object):
 
     def _find_match(self, environ, match_list):
         for i in match_list:
-            match = i.match(environ)
+            match = i.match(environ, self.match_param)
             if match:
                 request = Request(self.app, environ, match)
                 response = Response(self.app, i, request)
