@@ -9,6 +9,9 @@ class PatternMatch(object):
     def __init__(self, pattern, match):
         self.pattern = pattern
         self.match = match
+        
+    def __repr__(self):
+        return "<PatternMatch(%s, %s)>" % (self.pattern, self.match)
 
 
 class RouteList(list):
@@ -33,7 +36,9 @@ class RouteList(list):
 
         route_list = RouteList([route1, route2, route3])
     '''
-    def __init__(self, data=[]):
+    def __init__(self, data=[], priority=10):
+        self.priority = priority
+        
         for i in data:
             if isinstance(i, Route):
                 self.append(i)
@@ -41,11 +46,21 @@ class RouteList(list):
                 self.append(Route(i))
 
     def __repr__(self):
-        return "<RouteList([%s])>" % ', '.join(map(repr, self))
+        return "<RouteList([%s], priority=%s)>" % (', '.join(map(repr, self)),
+            self.priority)
 
     def __or__(self, other):
         self.append(other)
         return self
+    
+    def __gt__(self, other):
+        return self.priority > other.priority
+    
+    def __lt__(self, other):
+        return not self.__gt__(other)
+    
+    def __eq__(self, other):
+        return list.__eq__(self, other) and self.priority == other.priority
 
     def match(self, uri):
         for i in self:
@@ -66,14 +81,26 @@ class Route(object):
     __sub_pattern = re.compile(':([a-zA-Z_\-0-9]+)(\?)?')
     __sub_last_pattern = re.compile('\/:([a-zA-Z_\-0-9]+)(\?)?$')
 
-    def __init__(self, regex):
+    def __init__(self, regex, priority=10):
+        self.priority = priority
+        
         if isinstance(regex, str):
             self._regex = self._make_regex(regex)
         else:
             self._regex = regex
+ 
+    def __gt__(self, other):
+        return self.priority > other.priority
+    
+    def __lt__(self, other):
+        return not self.__gt__(other)
+    
+    def __eq__(self, other):
+        return self.priority == other.priority and self._regex == other._regex
 
     def __repr__(self):
-        return "<Route(%s)>" % self._regex.pattern
+        return "<Route(%s, priority=%s)>" % (self._regex.pattern,
+            self.priority)
 
     def match(self, uri):
         '''
@@ -143,13 +170,33 @@ class RouteMapping(object):
     def __init__(self, pattern, middleware, method, match_fn=None):
         if isinstance(pattern, (list, tuple)):
             pattern = RouteList(pattern)
-        else:
+        elif isinstance(pattern, basestring):
             pattern = Route(pattern)
+        elif not isinstance(pattern, (Route, RouteList)):
+            raise ValueError("Invalid pattern: %s" % pattern)
 
         self.pattern = pattern
         self.middleware = middleware
         self.method = method
         self.match_fn = match_fn
+        
+    def __gt__(self, other):
+        return self.pattern > other.pattern
+      
+    def __lt__(self, other):
+        return not self.__gt__(other)
+      
+    def __eq__(self, other):
+        return (
+            self.pattern == other.pattern and 
+            self.middleware == other.middleware and
+            self.method == other.method and
+            self.match_fn == other.match_fn
+        )
+    
+    def __repr__(self):
+        return "<RouteMapping(%s, %s, %s, %s)>" % (self.pattern,
+            self.middleware, self.method, self.match_fn)
 
     def match(self, environ, match_param='PATH_INFO'):
         '''
@@ -203,6 +250,8 @@ class Routes(object):
         self.__put = []
         self.__delete = []
         self.__all = []
+        
+        self._sorted = False
 
         self.http404 = RouteMapping('*', [], ErrorController.http404)
         self.http500 = RouteMapping('*', [], ErrorController.http500)
@@ -300,6 +349,15 @@ class Routes(object):
                 request = Request(self.app, environ, match)
                 response = Response(self.app, i, request)
                 return (request, response)
+
+    def _sort(self):
+        if not self._sorted:
+            self.__get.sort(reverse=True)
+            self.__post.sort(reverse=True)
+            self.__put.sort(reverse=True)
+            self.__delete.sort(reverse=True)
+            self.__all.sort(reverse=True)
+            self._sorted = True
 
     def match(self, environ):
         '''
