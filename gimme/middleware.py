@@ -105,6 +105,17 @@ def connection_helper(connection='close'):
 
 
 def static(path, expose_as='/'):
+    '''
+    Exposes a directory to the application to be serviced as static files::
+
+        app.use(gimme.middleware.static('images'))
+
+    :param path: The local filesystem path to expose.
+    :param expose_as: An optional name to prefix the exposed files as. For
+        example, if you wanted to expose an "/var/images" directory as "imgs"
+        to the world, you would do
+        ``app.use(static('/var/images', '/imgs/'))``.
+    '''
     import mimetypes
 
     expose_as = (expose_as or os.path.basename(path)).strip('/')
@@ -143,6 +154,10 @@ def static(path, expose_as='/'):
 
 
 def cookie_parser():
+    '''
+    Creates a ``cookies`` dictionary in the request object that contains all
+    of the cookies passed by the client in handy key/value pair format.
+    '''
     class CookieParserMiddleware(Middleware):
         def enter(self):
             try:
@@ -163,6 +178,17 @@ def cookie_parser():
 
 def session(cache='gimme.cache.memory', session_cookie='gimme_session',
         make_session_key=uuid.uuid4, expiration_time=60*60*24*7, **kwargs):
+    '''
+    Adds session functionality, accessible via ``request.session``.
+
+    :param cache: Which dogpile cache backend to use. Any dogpile cache
+        backend will do.
+    :param session_cookie: The name of the cookie to use for storing the
+        session identifier.
+    :param make_session_key: A callable to use for generating a session
+        identifier.
+    :param expiration_time: Time in seconds that the session is valid for.
+    '''
 
     region = make_region().configure(cache,
         expiration_time=expiration_time, **kwargs)
@@ -198,6 +224,10 @@ def session(cache='gimme.cache.memory', session_cookie='gimme_session',
 
 
 def json():
+    '''
+    Parses requests where Content-Type == application/json and dumps the
+    result to ``request.body``.
+    '''
     class JsonMiddleware(Middleware):
         def enter(self):
             if not hasattr(self.request, 'body'):
@@ -216,6 +246,10 @@ def json():
 
 
 def urlencoded():
+    '''
+    Parses requests where Content-Type == application/x-www-form-urlencoded
+    and dumps the result to ``request.body``.
+    '''
     from .uri import QueryString
 
     class URLEncodedMiddleware(Middleware):
@@ -232,6 +266,10 @@ def urlencoded():
 
 
 def multipart():
+    '''
+    Parses requests where Content-Type == multipart/form-data and dumps the
+    result to ``request.body`` and ``request.files``.
+    '''
     multipart_pattern = re.compile('^multipart/form-data; boundary=(.*)', re.I)
 
     class MultipartMiddleware(Middleware):
@@ -261,6 +299,11 @@ def multipart():
 
 
 def body_parser(json_args={}, urlencoded_args={}, multipart_args={}):
+    '''
+    Applies the :func:`json <gimme.middleware.json>`, :func:`urlencoded
+    <gimme.middleware.urlencoded>`, and :func:`multipart
+    <gimme.middleware.multipart>` middleware.
+    '''
     json_parser = json(**json_args)
     urlencoded_parser = urlencoded(**urlencoded_args)
     multipart_parser = multipart(**multipart_args)
@@ -290,6 +333,9 @@ def method_override():
 
 
 def compress():
+    '''
+    Applies deflate compression and necessary headers to the response.
+    '''
     import zlib
 
     class CompressMiddleware(Middleware):

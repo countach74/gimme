@@ -124,6 +124,21 @@ Middleware
 .. autoclass:: gimme.middleware.Middleware
    :members:
 
+.. autofunction:: gimme.middleware.static
+
+.. autofunction:: gimme.middleware.cookie_parser
+
+.. autofunction:: gimme.middleware.session
+
+.. autofunction:: gimme.middleware.json
+
+.. autofunction:: gimme.middleware.urlencoded
+
+.. autofunction:: gimme.middleware.multipart
+
+.. autofunction:: gimme.middleware.body_parser
+
+.. autofunction:: gimme.middleware.compress
 
 
 Indices and tables
