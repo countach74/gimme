@@ -15,6 +15,47 @@ from jinja2 import Environment, PackageLoader, ChoiceLoader, FileSystemLoader
 
 
 class Middleware(object):
+    '''
+    All middleware in Gimme inherits (or should, at least) from the
+    ``Middleware`` class. Middleware is implemented as context managers, but
+    the ``Middleware`` class does a couple of extra things to ensure that
+    certain things can happen: like the ability for a piece of middleware to
+    force the response to stop calling middleware futher down the chain.
+
+    To implement middleware, simply subclass ``Middleware`` and implement
+    the :meth:`enter <gimme.middleware.Middleware.enter>` and/or
+    :meth:`exit <gimme.middleware.Middleware.exit>` methods. The ``enter``
+    method is called before the :class:`ControllerMethod
+    <gimme.controller.ControllerMethod>` is called and the ``exit`` method
+    is called after. Middlware has access to the gimme application, the
+    current :class:`Request <gimme.request.Request>`, and the current
+    :class:`Response <gimme.response.Response>` (access is provided via
+    attributes ``app``, ``request``, and ``response``, respectively).
+
+    Example::
+
+        class AuthMiddleware(gimme.middleware.Middleware):
+            def enter(self):
+                if 'user' not in self.request.session:
+                    # Redirect to login
+                    self.response.redirect('/login')
+
+                    # Tell the response to not continue on with any further
+                    # middleware.
+                    raise gimme.AbortRender
+
+    Sometimes it is necessary to pass parameters to middleware. The way I
+    recommend doing this is using closure within a function, like so::
+
+        def auth_middleware(role):
+            class AuthMiddleware(gimme.middleware.Middleware):
+                def enter(self):
+                    if ('user' not in self.request.session or
+                            role not in self.request.session.roles):
+                        self.response.redirect('/login')
+                        raise gimme.AbortRender
+            return AuthMiddleware
+    '''
     def __init__(self, app, request, response):
         self.app = app
         self.request = request
@@ -39,9 +80,17 @@ class Middleware(object):
             self.response._aborted = True
 
     def enter(self):
+        '''
+        Method to override to make changes pre :class:`ControllerMethod
+        <gimme.controller.ControllerMethod>` render.
+        '''
         pass
 
     def exit(self):
+        '''
+        Method to override to make changes post :class:`ControllerMethod
+        <gimme.controller.ControllerMethod>` render.
+        '''
         pass
 
 

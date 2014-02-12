@@ -119,6 +119,11 @@ Now, to use your new engine, simply pass it to your app on instantiation::
 .. autoclass:: gimme.engines.Jinja2Engine
    :members:
 
+Middleware
+----------
+.. autoclass:: gimme.middleware.Middleware
+   :members:
+
 
 
 Indices and tables
