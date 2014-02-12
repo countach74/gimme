@@ -41,7 +41,7 @@ class HTTPError(GimmeError):
         except AttributeError:
             method = controller.ErrorController.generic
 
-        self.route = gimme.routes.RouteMapping(None, '*', [], method)
+        self.route = gimme.routes.RouteMapping('*', [], method)
 
     def make_response(self, request):
         res = response.Response(request.app, self.route, request)
