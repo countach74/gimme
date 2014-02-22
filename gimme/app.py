@@ -70,7 +70,8 @@ class App(object):
         }
 
     def __call__(self, environ, start_response):
-        self.routes._sort()
+        # Disabled because sort is not implemented in a very useful way (yet)
+        # self.routes._sort()
         return self.__wsgi.process(environ, start_response)
 
     def listen(self, port=8080, host='127.0.0.1', http_server=HTTPServer):
