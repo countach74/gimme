@@ -91,6 +91,9 @@ class HeadersDict(object):
     def items(self):
         return [(i.key, i.value) for i in self._headers]
 
+    def items_str(self):
+        return [(str(i.key), str(i.value)) for i in self._headers]
+
     def iteritems(self):
         for i in self._headers:
             yield (i.key, i.value)
