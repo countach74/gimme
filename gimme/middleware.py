@@ -66,18 +66,31 @@ class Middleware(object):
             try:
                 return self.enter()
             except AbortRender:
-                self.response._aborted = True
+                self.response._aborted = self
 
     def __exit__(self, err_type, err_obj, traceback):
-        if not self.response._aborted:
+        if self._ok_to_exit():
             self.exit_arguments = (err_type, err_obj, traceback)
             try:
                 self.exit()
             except AbortRender:
-                self.response._aborted = True
+                self.response._aborted = self
 
         if isinstance(err_obj, AbortRender):
-            self.response._aborted = True
+            self.response._aborted = self
+
+    def _ok_to_exit(self):
+        if not self.response._aborted:
+            return True
+        else:
+            index_self = self.response.instantiated_middleware.index(self)
+            try:
+                index_aborted = self.response.instantiated_middleware.index(
+                    self.response._aborted)
+            except ValueError:
+                index_aborted = -1
+            finally:
+                return index_self < index_aborted
 
     def enter(self):
         '''
@@ -325,7 +338,7 @@ def method_override():
     class MethodOverrideMiddleware(Middleware):
         def enter(self):
             if self.request.type == 'application/x-www-form-urlencoded':
-                query_string = self.QueryString(self.request.raw_body)
+                query_string = QueryString(self.request.raw_body)
                 if '_method' in query_string:
                     self.request.headers.request_method = query_string._method
 

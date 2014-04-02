@@ -87,14 +87,14 @@ class Response(object):
         elif not middleware:
             middleware = []
 
-        instantiated_middleware = self._instantiate_middleware(middleware)
+        self.instantiated_middleware = self._instantiate_middleware(middleware)
 
-        with nested(*instantiated_middleware):
+        with nested(*self.instantiated_middleware):
             try:
                 if not self._aborted:
                     self.body = method()
             except gimme.errors.AbortRender:
-                self._aborted = True
+                self._aborted = method
 
     def _instantiate_middleware(self, middleware):
         result = []

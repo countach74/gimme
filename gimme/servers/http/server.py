@@ -10,7 +10,7 @@ import signal
 
 class HTTPServer(object):
     def __init__(self, app, host='localhost', port=8080, listen=5,
-            max_read=8092, chunk_size=1024, auto_reload=True,
+            max_read=8092, chunk_size=8092, auto_reload=True,
             logger=StdLogger()):
 
         self.app = app

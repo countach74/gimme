@@ -50,7 +50,7 @@ class HTTPError(GimmeError):
 
 
 class HTTPRedirect(HTTPError):
-    def __init__(self, url, status=301):
+    def __init__(self, url, status=302):
         self.url = url
         HTTPError.__init__(self, status)
 
