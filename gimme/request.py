@@ -190,6 +190,6 @@ class Request(object):
     @property
     def protocol(self):
         '''
-        Gimme only supports HTTP as of the time of this writing.
+        Gimme only supports HTTP/1.1 as of the time of this writing.
         '''
-        return 'http'
+        return self.headers.get('server_protocol', 'HTTP/1.1')

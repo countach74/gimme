@@ -8,9 +8,11 @@ import json as jsonlib
 from dogpile.cache import make_region
 from dogpile.cache.api import NO_VALUE
 from .parsers.multipart import MultipartParser
+from .parsers.contenttype import ContentType
 from .dotdict import DotDict
 from .ext.session import Session as Session
 from .errors import AbortRender
+from .output import OutputBody
 from jinja2 import Environment, PackageLoader, ChoiceLoader, FileSystemLoader
 
 
@@ -345,7 +347,7 @@ def method_override():
     return MethodOverrideMiddleware
 
 
-def compress():
+def compress(types=['application/json', 'text/*']):
     '''
     Applies deflate compression and necessary headers to the response.
     '''
@@ -353,18 +355,26 @@ def compress():
 
     class CompressMiddleware(Middleware):
         def exit(self):
+            try:
+                content_type = ContentType(
+                    str(self.response.headers['Content-Type']))
+            except (ValueError, KeyError):
+                return
+
             if 'accept_encoding' in self.request.headers:
-                    if ('deflate' in
-                            self.request.headers.accept_encoding.split(',')):
-                        try:
-                            compressed = zlib.compress(self.response.body)
-                        except TypeError:
-                            pass
-                        else:
-                            self.response.headers['Content-Encoding'] = 'deflate'
+                if ('deflate' in
+                        self.request.headers.accept_encoding.split(',') and
+                        content_type in types):
+                    try:
+                        compressed = zlib.compress(str(self.response.body))
+                    except TypeError:
+                        pass
+                    else:
+                        self.response.headers['Content-Encoding'] = 'deflate'
+                        if self.request.protocol != 'HTTP/1.1':
                             self.response.headers['Content-Length'] = str(
                                 len(compressed))
-                            self.response.body = compressed
+                        self.response.body = compressed
 
     return CompressMiddleware
 

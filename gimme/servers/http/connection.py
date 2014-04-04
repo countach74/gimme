@@ -6,6 +6,7 @@ import mmap
 import re
 from collections import deque
 from .headers import RequestHeaders, RequestLine
+from . import encoding
 from ...errors import FDError
 from ...dotdict import DotDict
 from tempfile import NamedTemporaryFile
@@ -165,9 +166,6 @@ class Connection(object):
         except socket.error:
             self.fail()
 
-        #if not self.write_buffer:
-        #  self.close()
-
     def handle_request(self):
         try:
             self.server.r_list.remove(self)
@@ -224,10 +222,13 @@ class Connection(object):
             # Send headers
             headers_sent = False
             response_length = 0
+            response = encoding.Chunked(self, response)
 
             # Send response
             for i in response:
                 if not headers_sent:
+                    if self not in self.server.w_list:
+                        self.server.w_list.append(self)
                     self.send_headers(self.status, self.headers)
                     headers_sent = True
                 response_length += len(i)
@@ -235,9 +236,6 @@ class Connection(object):
                 self.send(i)
 
             self.write_buffer.append(None)
-
-            if self not in self.server.w_list:
-                self.server.w_list.append(self)
 
     def send_headers(self, status, headers):
         self.send("HTTP/1.1 %s\r\n" % status)

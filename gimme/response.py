@@ -9,6 +9,7 @@ from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 from .controller import ErrorController
 from .parsers.status import StatusCode
+from .output import OutputBody
 import gimme.errors
 
 
@@ -46,10 +47,18 @@ class Response(object):
 
         self._controller_class = (route.method.im_class
             if hasattr(route.method, 'im_class') else None)
-        self.body = None
+        self._body = OutputBody('')
 
         # Storage for request-specific local data
         self.locals = DotDict()
+
+    @property
+    def body(self):
+        return self._body
+
+    @body.setter
+    def body(self, value):
+        self._body.set(value)
 
     @property
     def status(self):

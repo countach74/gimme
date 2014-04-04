@@ -3,10 +3,13 @@ import sys
 from .routes import Routes
 from .errors import TemplateError
 from .wsgi import WSGIAdapter
-from .servers.http import HTTPServer
+#from .servers.http import HTTPServer
 from .servers.logger import SysLogger
 from .middleware import connection_helper
 from .engines import Jinja2Engine
+from .modulemonitor import ModuleMonitor
+from gevent.pywsgi import WSGIServer
+import gevent
 
 
 class App(object):
@@ -74,7 +77,7 @@ class App(object):
         # self.routes._sort()
         return self.__wsgi.process(environ, start_response)
 
-    def listen(self, port=8080, host='127.0.0.1', http_server=HTTPServer):
+    def listen(self, host='127.0.0.1', port=8080):
         '''
         Starts the built-in development webserver.
 
@@ -82,8 +85,19 @@ class App(object):
         :param str host: The hostname/IP address to listen on.
         :param http_server: What class to use for the HTTP server.
         '''
-        server = http_server(self, host, port)
-        server.start()
+        server = WSGIServer((host, port), self)
+
+        def start_server():
+            server.serve_forever()
+
+        spawned_server = gevent.Greenlet.spawn(start_server)
+
+        if self.get('env') == 'development':
+            monitor = ModuleMonitor(server)
+            monitor.start()
+            gevent.wait([spawned_server, monitor])
+        else:
+            gevent.wait([spawned_server])
 
     def use(self, middleware):
         '''
