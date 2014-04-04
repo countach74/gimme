@@ -20,13 +20,12 @@ class OutputBody(object):
             return self._make_iter(True)
 
     def _make_iter(self, convert_to_string=False):
-        pos = 0
         data = self.body if not convert_to_string else str(self.body)
-        chunk = data[pos:self.chunk_size]
+        chunk = data[0:self.chunk_size]
         while chunk:
-            yield chunk
-            pos += self.chunk_size
-            chunk = data[pos:self.chunk_size]
+            yield str(chunk)
+            data = data[self.chunk_size:]
+            chunk = data[0:self.chunk_size]
         raise StopIteration
 
     def __repr__(self):

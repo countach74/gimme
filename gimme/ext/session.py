@@ -158,3 +158,6 @@ class Session(object):
         Removes the session from the cache backend.
         '''
         self._cache.delete(self._key)
+
+    def keys(self):
+        return self._data.keys()

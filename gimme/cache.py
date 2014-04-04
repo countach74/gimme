@@ -4,8 +4,10 @@ import os
 
 
 class Memory(CacheBackend):
+    cache = {}
+
     def __init__(self, arguments):
-        self.cache = {}
+        pass
 
     def get(self, key):
         return self.cache.get(key, NO_VALUE)

@@ -8,6 +8,7 @@ from .servers.logger import SysLogger
 from .middleware import connection_helper
 from .engines import Jinja2Engine
 from .modulemonitor import ModuleMonitor
+from .util import start_servers
 from gevent.pywsgi import WSGIServer
 import gevent
 
@@ -85,19 +86,14 @@ class App(object):
         :param str host: The hostname/IP address to listen on.
         :param http_server: What class to use for the HTTP server.
         '''
+        servers = []
         server = WSGIServer((host, port), self)
-
-        def start_server():
-            server.serve_forever()
-
-        spawned_server = gevent.Greenlet.spawn(start_server)
+        servers.append(server)
 
         if self.get('env') == 'development':
-            monitor = ModuleMonitor(server)
-            monitor.start()
-            gevent.wait([spawned_server, monitor])
-        else:
-            gevent.wait([spawned_server])
+            servers.append(ModuleMonitor(server))
+
+        start_servers(servers)
 
     def use(self, middleware):
         '''
