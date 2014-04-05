@@ -78,7 +78,7 @@ class App(object):
         # self.routes._sort()
         return self.__wsgi.process(environ, start_response)
 
-    def listen(self, host='127.0.0.1', port=8080):
+    def listen(self, host='127.0.0.1', port=8080, server_class=WSGIServer):
         '''
         Starts the built-in development webserver.
 
@@ -86,14 +86,15 @@ class App(object):
         :param str host: The hostname/IP address to listen on.
         :param http_server: What class to use for the HTTP server.
         '''
-        servers = []
-        server = WSGIServer((host, port), self)
-        servers.append(server)
+        servers = [self.server(host, port, server_class)]
 
         if self.get('env') == 'development':
-            servers.append(ModuleMonitor(server))
+            servers.append(ModuleMonitor(servers[0:1]))
 
         start_servers(servers)
+
+    def server(self, host='127.0.0.1', port=8080, server_class=WSGIServer):
+        return server_class((host, port), self)
 
     def use(self, middleware):
         '''

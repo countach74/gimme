@@ -198,7 +198,7 @@ class RouteMapping(object):
         return "<RouteMapping(%s, %s, %s, %s)>" % (self.pattern,
             self.middleware, self.method, self.match_fn)
 
-    def match(self, environ, match_param='PATH_INFO'):
+    def match(self, environ, match_param='PATH_INFO', context='SCRIPT_NAME'):
         '''
         Test to see if a WSGI environ dict matches the pattern. If it does,
         a :class:`PatternMatch <gimme.routes.PatternMatch>` object is
@@ -210,11 +210,17 @@ class RouteMapping(object):
         :return: An instance of :class:`PatternMatch
             <gimme.routes.PatternMatch>` or ``None``.
         '''
-        uri = environ[match_param]
+        uri = environ.get(match_param, '')
+        script_name = environ.get(context, '')
+
+        if uri.startswith(script_name):
+            relative_uri = uri[len(script_name):]
+        else:
+            relative_uri = uri
 
         if not self.match_fn or (self.match_fn and
-                self.match_fn(uri, environ)):
-            return self.pattern.match(uri)
+                self.match_fn(relative_uri, environ)):
+            return self.pattern.match(relative_uri)
 
 
 class Routes(object):

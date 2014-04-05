@@ -9,13 +9,16 @@ class ContentType(object):
         self._match = self._pattern.match(content_type)
 
         if not self._match:
-            raise ValueError("Invalid Content-Type: %s" % content_type)
+            #raise ValueError("Invalid Content-Type: %s" % content_type)
+            self._category = ''
+            self._type = ''
 
-        self._groups = self._match.groupdict()
+        else:
+            self._groups = self._match.groupdict()
 
-        # Some helpers to make accessing data easier
-        self._category = self._groups['category']
-        self._type = self._groups['type']
+            # Some helpers to make accessing data easier
+            self._category = self._groups['category']
+            self._type = self._groups['type']
 
     def __eq__(self, other):
         if not isinstance(other, ContentType):

@@ -11,8 +11,8 @@ class ModuleMonitor(gevent.Greenlet):
     Monitors all of the modules loaded by the current running application. If
     any of them change (detected via os.stat), reload the running process.
     '''
-    def __init__(self, server, interval=1):
-        self.server = server
+    def __init__(self, servers, interval=1):
+        self.servers = servers
         self.interval = interval
         self._stop = gevent.event.Event()
         gevent.Greenlet.__init__(self)
@@ -31,11 +31,15 @@ class ModuleMonitor(gevent.Greenlet):
                 new_stats = self.stat_modules()
                 if not self.compare_stats(old_stats, new_stats):
                     print 'Something changed! Restarting server...'
-                    self.server.stop()
+                    self.stop_servers()
                     gevent.sleep(1)
                     self.restart_app()
                 old_stats = new_stats
             gevent.sleep(1)
+
+    def stop_servers(self):
+        for i in server:
+            i.stop()
 
     def restart_app(self):
         python = sys.executable
