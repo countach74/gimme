@@ -8,7 +8,6 @@ setup(
         'gimme',
         'gimme.ext',
         'gimme.servers',
-        'gimme.servers.http',
         'gimme.servers.logger',
         'gimme.parsers'
     ],
@@ -42,5 +41,5 @@ setup(
     description='An ExpressJS-inspired web framework... in Python',
     license='MIT',
     test_suite='tests',
-    install_requires=['jinja2', 'dogpile.cache'],
+    install_requires=['jinja2', 'dogpile.cache', 'gevent'],
 )
