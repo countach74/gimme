@@ -8,6 +8,75 @@ import os
 from ..errors import MultipartError
 
 
+class ChunkFile(object):
+    def __init__(self, mmap_file, start_pos, end_pos):
+        self._file = mmap_file
+        self._start_pos = start_pos
+        self._end_pos = end_pos
+        self._pos = start_pos
+
+    def __repr__(self):
+        return "<ChunkFile(%s)>" % self._file
+
+    def close(self):
+        pass
+
+    def flush(self):
+        self._file.flush(self._start_pos, self.size())
+
+    def read(self, size=0):
+        if size:
+            data = self._file[self._pos:min(self._pos + size, self._end_pos)]
+            self._pos = min(self._pos + size, self._end_pos)
+        else:
+            data = self._file[self._pos:self._end_pos]
+            self._pos = self._end_pos
+        return data
+
+    def readline(self, size=0):
+        line = self._file.readline()
+        length = len(line)
+        original_pos = self._pos
+
+        if self._pos + length > self._end_pos:
+            line = line[0:self._end_pos - self._pos]
+            self._pos = self._end_pos
+            length = len(line)
+        else:
+            self._pos = self._pos + length
+
+        if size > 0 and length > size:
+            line = line[0:size]
+            self._pos = original_pos + size
+            length = len(line)
+
+        return line
+
+    def readlines(self):
+        lines = []
+        data = self.readline()
+        while data:
+            lines.append(data)
+            data = self.readline()
+        return lines
+
+    def seek(self, offset, whence=os.SEEK_SET):
+        if whence == os.SEEK_SET:
+            self._pos = min(self._start_pos + offset, self._end_pos)
+        elif whence == os.SEEK_CUR:
+            self._pos = min(self._pos + offset, self._end_pos)
+        elif whence == os.SEEK_END:
+            self._pos = max(self._end_pos - offset, self._start_pos)
+        else:
+            raise Exception("Invalid seek whence: %s" % whence)
+
+    def size(self):
+        return self._end_pos - self._start_pos
+
+    def tell(self):
+        return self._pos - self._start_pos
+
+
 class MultipartHeaders(dict):
     _pattern = re.compile('^([a-zA-Z0-9_\-]+):\s*(.*?)$', re.M)
 
@@ -56,7 +125,7 @@ class MultipartFile(object):
         self.name = self._get_field_name()
         self.filename = self._get_field_filename()
         self.content_type, self.charset = self._get_type()
-        self.file = self._make_tempfile()
+        self.file = self._make_file()
         
         if self.disposition == 'form-data' and self.content_type is None:
             self.value = self.file.read().decode(self.charset)
@@ -81,12 +150,6 @@ class MultipartFile(object):
         else:
             return ('text/plain', 'ISO-8859-1')
 
-    def _cleanup(self):
-        try:
-            os.unlink(self.file.name)
-        except OSError:
-            print "That's bad"
-        
     def _get_disposition(self):
         disposition = self.headers.get('content-disposition', '')
         match = self._disposition_pattern.search(disposition)
@@ -107,10 +170,25 @@ class MultipartFile(object):
         if match:
             return match.group(2)
 
+    def _make_file(self):
+        start_pos = self._pos + self._headers_length + 2
+        chunkfile = ChunkFile(self._data, start_pos, self._endpos - 2)
+        transfer_encoding = self.headers.get('content-transfer-encoding',
+            '').lower()
+        if transfer_encoding not in ('', '7bit', '8bit', 'binary'):
+            try:
+                chunkfile = codecs.getreader(transfer_encoding)(chunkfile)
+            except (TypeError, LookupError):
+                pass
+        try:
+            return codecs.getreader(self.charset)(chunkfile)
+        except (TypeError, LookupError):
+            return chunkfile
+
     def _make_tempfile(self):
         transfer_encoding = self.headers.get('content-transfer-encoding',
             '').lower()
-        tf = NamedTemporaryFile(delete=False)
+        tf = NamedTemporaryFile()
         start_pos = self._pos + self._headers_length + 2
         file_length = (self._endpos - 2) - start_pos
         bytes_read = 0
@@ -126,13 +204,17 @@ class MultipartFile(object):
         tf.seek(0)
 
         if transfer_encoding not in ('', '7bit', '8bit', 'binary'):
-            decoded_tf = NamedTemporaryFile(delete=False)
+            decoded_tf = NamedTemporaryFile()
             mimetools.decode(tf, decoded_tf, transfer_encoding)
-            decoded_tf.close()
-            return codecs.open(decoded_tf.name, 'r', self.charset)
+            try:
+                return codecs.getreader(self.charset)(decoded_tf)
+            except (TypeError, LookupError):
+                return decoded_tf
         else:
-            tf.close()
-            return codecs.open(tf.name, 'r', self.charset)
+            try:
+                return codecs.getreader(self.charset)(tf)
+            except (TypeError, LookupError):
+                return tf
 
     def _get_headers(self):
         match = self._headers_pattern.search(self._data, self._pos,
@@ -141,6 +223,9 @@ class MultipartFile(object):
             raise MultipartError("Invalid multipart headers.")
         raw_headers = self._data[match.start():min(match.end(), 8196)]
         return MultipartHeaders(raw_headers), len(raw_headers)
+
+    def _cleanup(self):
+        self.file.close()
 
 
 class MultipartParser(dict):
@@ -166,16 +251,14 @@ class MultipartParser(dict):
 
         pattern = re.compile('(?<=--{0})(.*?)(?=--{0})'.format(
             re.escape(self.boundary)), re.S)
-        filedata = mmap.mmap(self.tempfile.fileno(), 0)
+        self.filedata = mmap.mmap(self.tempfile.fileno(), 0)
 
-        for i in pattern.finditer(filedata):
+        for i in pattern.finditer(self.filedata):
             try:
-                files.append(MultipartFile(self.boundary, filedata, i.start(),
+                files.append(MultipartFile(self.boundary, self.filedata, i.start(),
                     i.end()))
             except MultipartError:
                 continue
-
-        filedata.close()
 
         return files
 
@@ -183,6 +266,7 @@ class MultipartParser(dict):
         for i in self.itervalues():
             i._cleanup()
         self.tempfile.close()
+        self.filedata.close()
 
     def _parse(self):
         for i in self._split_files():
