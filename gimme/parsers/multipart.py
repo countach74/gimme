@@ -1,8 +1,10 @@
 import re
 import mmap
 import mimetools
+import codecs
 from tempfile import NamedTemporaryFile
 import sys
+import os
 from ..errors import MultipartError
 
 
@@ -36,6 +38,7 @@ class MultipartFile(object):
     _name_pattern = re.compile('''name=(?P<quote>["'])(.*?)(?P=quote);?''')
     _filename_pattern = re.compile('''filename=(?P<quote>["'])(.*?)(?P=quote);?''')
     _disposition_pattern = re.compile('^([a-zA-Z0-9_\-]+)')
+    _content_type_pattern = re.compile('^(?P<content_type>[a-zA-Z0-9_\-]+/[a-zA-Z0-9_\-]+)(?:;\s*charset=)?(?P<charset>[a-zA-Z0-9_\-]+)?')
 
     def __init__(self, boundary, data, pos, endpos):
         self._boundary = boundary
@@ -52,17 +55,37 @@ class MultipartFile(object):
         
         self.name = self._get_field_name()
         self.filename = self._get_field_filename()
-        self.content_type = self.headers.get('content-type', None)
+        self.content_type, self.charset = self._get_type()
         self.file = self._make_tempfile()
         
         if self.disposition == 'form-data' and self.content_type is None:
-            self.value = self.file.read()
+            self.value = self.file.read().decode(self.charset)
             self.file.seek(0)
         else:
             self.value = None
 
     def __repr__(self):
         return '<MultipartFile(%s)>' % self.name
+
+    def _get_type(self):
+        temp = self.headers.get('content-type', None)
+
+        if not temp:
+            return (None, 'ISO-8859-1')
+
+        match = self._content_type_pattern.search(temp)
+        if match:
+            groups = match.groupdict()
+            return (groups['content_type'], groups.get('charset',
+                'ISO-8859-1'))
+        else:
+            return ('text/plain', 'ISO-8859-1')
+
+    def _cleanup(self):
+        try:
+            os.unlink(self.file.name)
+        except OSError:
+            print "That's bad"
         
     def _get_disposition(self):
         disposition = self.headers.get('content-disposition', '')
@@ -87,7 +110,7 @@ class MultipartFile(object):
     def _make_tempfile(self):
         transfer_encoding = self.headers.get('content-transfer-encoding',
             '').lower()
-        tf = NamedTemporaryFile()
+        tf = NamedTemporaryFile(delete=False)
         start_pos = self._pos + self._headers_length + 2
         file_length = (self._endpos - 2) - start_pos
         bytes_read = 0
@@ -103,12 +126,13 @@ class MultipartFile(object):
         tf.seek(0)
 
         if transfer_encoding not in ('', '7bit', '8bit', 'binary'):
-            decoded_tf = NamedTemporaryFile()
+            decoded_tf = NamedTemporaryFile(delete=False)
             mimetools.decode(tf, decoded_tf, transfer_encoding)
-            decoded_tf.seek(0)
-            return decoded_tf
+            decoded_tf.close()
+            return codecs.open(decoded_tf.name, 'r', self.charset)
         else:
-            return tf
+            tf.close()
+            return codecs.open(tf.name, 'r', self.charset)
 
     def _get_headers(self):
         match = self._headers_pattern.search(self._data, self._pos,
@@ -124,15 +148,25 @@ class MultipartParser(dict):
         self.boundary = boundary
         self.fileobj = fileobj
         self.chunk_size = chunk_size
+        self.tempfile = self._make_tempfile(fileobj)
         dict.__init__(self, self._parse())
+
+    def _make_tempfile(self, fileobj):
+        tf = NamedTemporaryFile()
+        chunk = fileobj.read(self.chunk_size)
+        while chunk:
+            tf.write(chunk)
+            chunk = fileobj.read(self.chunk_size)
+        tf.seek(0)
+        return tf
 
     def _split_files(self):
         files = []
-        self.fileobj.seek(0)
+        #self.fileobj.seek(0)
 
         pattern = re.compile('(?<=--{0})(.*?)(?=--{0})'.format(
             re.escape(self.boundary)), re.S)
-        filedata = mmap.mmap(self.fileobj.fileno(), 0)
+        filedata = mmap.mmap(self.tempfile.fileno(), 0)
 
         for i in pattern.finditer(filedata):
             try:
@@ -144,6 +178,11 @@ class MultipartParser(dict):
         filedata.close()
 
         return files
+
+    def _cleanup(self):
+        for i in self.itervalues():
+            i._cleanup()
+        self.tempfile.close()
 
     def _parse(self):
         for i in self._split_files():

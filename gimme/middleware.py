@@ -303,11 +303,16 @@ def multipart():
 
                 if match:
                     mp = MultipartParser(match.group(1), self.request.wsgi.input)
+                    self.request._multipart_parser = mp
                     for name, mp_file in mp.iteritems():
                         if mp_file.value:
                             self.request.body[name] = mp_file.value
                         else:
                             self.request.files[name] = mp_file
+
+        def exit(self):
+            if hasattr(self.request, '_multipart_parser'):
+                self.request._multipart_parser._cleanup()
 
     return MultipartMiddleware
 
@@ -326,7 +331,11 @@ def body_parser(json_args={}, urlencoded_args={}, multipart_args={}):
         def enter(self):
             json_parser(self.app, self.request, self.response).enter()
             urlencoded_parser(self.app, self.request, self.response).enter()
-            multipart_parser(self.app, self.request, self.response).enter()
+            self.multipart_parser = multipart_parser(self.app, self.request, self.response)
+            self.multipart_parser.enter()
+
+        def exit(self):
+            self.multipart_parser.exit()
 
     return BodyParserMiddleware
 
