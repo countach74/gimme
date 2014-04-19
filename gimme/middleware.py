@@ -12,7 +12,6 @@ from .parsers.contenttype import ContentType
 from .dotdict import DotDict
 from .ext.session import Session as Session
 from .errors import AbortRender
-from .output import OutputBody
 from jinja2 import Environment, PackageLoader, ChoiceLoader, FileSystemLoader
 
 
@@ -366,7 +365,9 @@ def compress(types=['application/json', 'text/*']):
                         self.request.headers.accept_encoding.split(',') and
                         content_type in types):
                     try:
-                        compressed = zlib.compress(str(self.response.body))
+                        compressed = zlib.compress(unicode(
+                            self.response.body).encode(
+                            self.response.charset, 'replace'))
                     except TypeError:
                         pass
                     else:

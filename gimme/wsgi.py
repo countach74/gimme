@@ -26,8 +26,8 @@ class WSGIAdapter(object):
             err_response = err.make_response(request)
             err_response._render([])
 
-            start_response(str(err_response.status), err_response.headers.items_str())
+            start_response(str(err_response.status), err_response.get_headers())
             return err_response.body
         else:
-            start_response(str(response.status), response.headers.items_str())
+            start_response(str(response.status), response.get_headers())
             return response.body

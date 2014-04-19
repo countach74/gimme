@@ -38,7 +38,7 @@ class ModuleMonitor(gevent.Greenlet):
             gevent.sleep(1)
 
     def stop_servers(self):
-        for i in server:
+        for i in self.servers:
             i.stop()
 
     def restart_app(self):

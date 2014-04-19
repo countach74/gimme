@@ -4,11 +4,17 @@ import datetime
 import mimetypes
 import re
 import sys
-from contextlib import nested
+
+try:
+    from contextlib import nested
+except ImportError:
+    from util import nested
+
 from .dotdict import DotDict
 from .headers import ResponseHeaders, Header
 from .controller import ErrorController
 from .parsers.status import StatusCode
+from .parsers.contenttype import ContentType
 from .output import OutputBody
 import gimme.errors
 
@@ -45,9 +51,16 @@ class Response(object):
         except KeyError, e:
             self.headers = ResponseHeaders()
 
+        content_type = self.headers.get('Content-Type', None)
+
+        if content_type:
+            self._type = ContentType(content_type.value, True)
+        else:
+            self._type = ContentType('text/html; charset=utf-8', True)
+
         self._controller_class = (route.method.im_class
             if hasattr(route.method, 'im_class') else None)
-        self._body = OutputBody('')
+        self._body = OutputBody(self, '')
 
         # Storage for request-specific local data
         self.locals = DotDict()
@@ -156,11 +169,11 @@ class Response(object):
         '''
         A shortcut for getting and setting the HTTP "Content-Type" header.
         '''
-        return self.get('Content-Type')
+        return self._type
 
     @type.setter
     def type(self, content_type):
-        self.set('Content-Type', content_type)
+        self._type.set(content_type)
 
     def cookie(self, key, value, expires=None, http_only=False, secure=False,
             path='/', domain=None):
@@ -248,28 +261,11 @@ class Response(object):
         A helper for getting and setting the charset portion of the
         "Content-Type" header.
         '''
-        if 'Content-Type' in self.headers:
-            header = self.headers['Content-Type']
-            match = self._charset_pattern.match(header.value)
-            if match:
-                return match.group(2)
-        return None
+        return self._type.charset
 
     @charset.setter
     def charset(self, value):
-        if 'Content-Type' in self.headers:
-            header = self.headers['Content-Type']
-        else:
-            header = Header('Content-Type', 'text/html')
-            self.headers.add_header(header)
-
-        match = self._charset_pattern.match(header.value)
-        if match:
-            header.value = '%s; charset=%s' % (
-                match.group(1), value)
-        else:
-            header.value = '%s; charset=%s' % (
-                header.value, value)
+        self._type.charset = value
 
     def links(self, links):
         '''
@@ -292,3 +288,8 @@ class Response(object):
 
     def render(self, template, params):
         raise NotImplementedError("Response.render() not implemented!")
+
+    def get_headers(self):
+        headers = ResponseHeaders(self.headers)
+        headers['Content-Type'] = str(self._type)
+        return headers.items()

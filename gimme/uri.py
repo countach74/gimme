@@ -45,6 +45,12 @@ class QueryValue(list):
             self.remove(i)
         return self
 
+    def get(self):
+        if len(self) == 1:
+            return self[0]
+        else:
+            return self
+
 
 class QueryString(object):
     _reserved_attrs = ('_query_string', '_quote_plus', '_parsed')
@@ -71,7 +77,7 @@ class QueryString(object):
     def __getattr__(self, key):
         if key not in QueryString._reserved_attrs:
             try:
-                return self._parsed[key]
+                return self._parsed[key].get()
             except KeyError, e:
                 raise AttributeError(key)
         else:
