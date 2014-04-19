@@ -5,10 +5,10 @@ import codecs
 from tempfile import NamedTemporaryFile
 import sys
 import os
-from ..errors import MultipartError
+from .. import errors
 
 
-class ChunkFile(object):
+class MMapChunk(object):
     def __init__(self, mmap_file, start_pos, end_pos):
         self._file = mmap_file
         self._start_pos = start_pos
@@ -16,7 +16,7 @@ class ChunkFile(object):
         self._pos = start_pos
 
     def __repr__(self):
-        return "<ChunkFile(%s)>" % self._file
+        return "<MMapChunk(%s)>" % self._file
 
     def close(self):
         pass
@@ -49,6 +49,14 @@ class ChunkFile(object):
             line = line[0:size]
             self._pos = original_pos + size
             length = len(line)
+
+        # Some hackery to chomp off the first characters of mmap's readline(),
+        # if they happen to come before the MMapChunk's start_pos
+        temp_start = self._file.tell() - self._start_pos
+
+        if temp_start < self.tell():
+            line = line[self.tell()-temp_start:]
+            self._pos = self._pos - (self.tell() - temp_start)
 
         return line
 
@@ -119,7 +127,7 @@ class MultipartFile(object):
         
         # Before continuing, check disposition is sane
         if self.disposition not in ('form-data', 'file'):
-            raise MultipartError("Invalid disposition type: %s" %
+            raise errors.MultipartError("Invalid disposition type: %s" %
                 self.disposition)
         
         self.name = self._get_field_name()
@@ -160,7 +168,7 @@ class MultipartFile(object):
         disposition = self.headers.get('content-disposition', '')
         match = self._name_pattern.search(disposition)
         if not match:
-            raise MultipartError("Multipart file missing (or invalid) name in "
+            raise errors.MultipartError("Multipart file missing (or invalid) name in "
                 "content-disposition")
         return match.group(2)
 
@@ -172,7 +180,7 @@ class MultipartFile(object):
 
     def _make_file(self):
         start_pos = self._pos + self._headers_length + 2
-        chunkfile = ChunkFile(self._data, start_pos, self._endpos - 2)
+        chunkfile = MMapChunk(self._data, start_pos, self._endpos - 2)
         transfer_encoding = self.headers.get('content-transfer-encoding',
             '').lower()
         if transfer_encoding not in ('', '7bit', '8bit', 'binary'):
@@ -220,7 +228,7 @@ class MultipartFile(object):
         match = self._headers_pattern.search(self._data, self._pos,
             self._endpos)
         if not match:
-            raise MultipartError("Invalid multipart headers.")
+            raise errors.MultipartError("Invalid multipart headers.")
         raw_headers = self._data[match.start():min(match.end(), 8196)]
         return MultipartHeaders(raw_headers), len(raw_headers)
 
@@ -257,7 +265,7 @@ class MultipartParser(dict):
             try:
                 files.append(MultipartFile(self.boundary, self.filedata, i.start(),
                     i.end()))
-            except MultipartError:
+            except errors.MultipartError:
                 continue
 
         return files

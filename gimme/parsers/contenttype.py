@@ -2,7 +2,7 @@ import re
 
 
 class ContentType(object):
-    _pattern = re.compile('(?P<category>[a-zA-Z0-9_\-]+|\*)?/?(?P<type>[a-zA-Z0-9_\-]+|\*)(?:;\s*charset=)?(?P<charset>[a-zA-Z0-9_\-]+)?')
+    _pattern = re.compile('(?:(?P<category>[a-zA-Z0-9_\-]+|\*)/)?(?P<type>[a-zA-Z0-9_\-]+|\*)(?:;\s*charset=)?(?P<charset>[a-zA-Z0-9_\-]+)?')
 
     def __init__(self, content_type, use_encoding=False):
         self._content_type = content_type

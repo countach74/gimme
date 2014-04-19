@@ -37,7 +37,7 @@ class ResponseTest(unittest.TestCase):
 
     def test_type(self):
         self.response.type = 'application/pdf'
-        assert self.response.headers['Content-Type'] == 'application/pdf'
+        assert self.response.type == 'application/pdf'
 
     def test_cookie(self):
         self.response.cookie('simple_cookie', 'some_data')
@@ -61,7 +61,7 @@ class ResponseTest(unittest.TestCase):
         self.response.attachment = 'file.jpg'
         assert self.response.headers['Content-Disposition'] == ('attachment; '
             'filename="file.jpg"')
-        assert self.response.headers['Content-Type'] == 'image/jpeg'
+        assert self.response.type == 'image/jpeg'
 
     def test_charset(self):
         self.response.charset = 'UTF-8'
@@ -84,4 +84,4 @@ class ResponseTest(unittest.TestCase):
             'REQUEST_METHOD': 'GET'
         })
         response._render()
-        assert response.body == "this is a text response"
+        assert str(response.body) == "this is a text response"

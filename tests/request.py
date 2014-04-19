@@ -70,4 +70,4 @@ class RequestTest(unittest.TestCase):
         assert self.request.original_url == '/somewhere/something?this=is%20awesome'
 
     def test_protocol(self):
-        assert self.request.protocol == 'http'
+        assert self.request.protocol == 'HTTP/1.1'

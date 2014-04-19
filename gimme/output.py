@@ -22,10 +22,13 @@ class OutputBody(object):
 
     def _make_iter(self, convert_to_string=False):
         data = self.body if not convert_to_string else unicode(self.body,
-            self.response.charset, 'replace')
+            self.response.charset, 'ignore')
         chunk = data[0:self.chunk_size]
         while chunk:
-            yield chunk.encode(self.response.charset, 'replace')
+            if convert_to_string:
+                yield chunk.encode(self.response.charset, 'ignore')
+            else:
+                yield chunk
             data = data[self.chunk_size:]
             chunk = data[0:self.chunk_size]
         raise StopIteration

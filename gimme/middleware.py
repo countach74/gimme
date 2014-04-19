@@ -376,7 +376,7 @@ def compress(types=['application/json', 'text/*']):
                     try:
                         compressed = zlib.compress(unicode(
                             self.response.body).encode(
-                            self.response.charset, 'replace'))
+                            self.response.charset, 'ignore'))
                     except TypeError:
                         pass
                     else:

@@ -278,7 +278,7 @@ class ErrorController(Controller):
 
         return self.environment.get_template('errors/404.html').render({
             'headers': self.request.headers,
-        }).encode(self.response.charset, 'replace')
+        }).encode(self.response.charset, 'ignore')
 
     def http500(self):
         self.response.status = 500
@@ -292,9 +292,9 @@ class ErrorController(Controller):
                 e_type,
                 e_value,
                 e_traceback)
-        }).encode(self.response.charset, 'replace')
+        }).encode(self.response.charset, 'ignore')
 
     def generic(self):
         return self.environment.get_template('errors/generic.html').render({
             'status': self.response._status
-        }).encode(self.response.charset, 'replace')
+        }).encode(self.response.charset, 'ignore')

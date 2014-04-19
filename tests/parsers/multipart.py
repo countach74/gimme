@@ -1,8 +1,13 @@
 import unittest
 import tempfile
 import mmap
-from gimme.parsers.multipart import (MultipartParser, MultipartHeaders,
-    MultipartFile)
+import sys
+import os
+from gimme.parsers.multipart import (
+    MultipartParser,
+    MultipartHeaders,
+    MultipartFile,
+    MMapChunk)
 
 
 BOUNDARY = '---------------------------41184676334'
@@ -91,3 +96,47 @@ Some binary data
 
     def test_file_read(self):
         assert self.multipart_parser['image1'].file.read() == 'Some binary data'
+
+
+class MMapChunkTest(unittest.TestCase):
+    def setUp(self):
+        self.file = tempfile.NamedTemporaryFile()
+        self.file.write('''\
+line 1
+line 2
+does this work?''')
+        self.file.seek(0)
+        self.mmap = mmap.mmap(self.file.fileno(), 0)
+        self.chunk = MMapChunk(self.mmap, 5, 20)
+
+    def test_read(self):
+        assert self.chunk.read() == '1\nline 2\ndoes t'
+        self.chunk.seek(2)
+        assert self.chunk.read(3) == 'lin'
+
+    def test_seek(self):
+        self.chunk.seek(1)
+        assert self.chunk.read(1) == '\n'
+        self.chunk.seek(1, os.SEEK_CUR)
+        assert self.chunk.read(1) == 'i'
+        self.chunk.seek(1, os.SEEK_END)
+        assert self.chunk.read(1) == 't'
+
+    def test_readline(self):
+        assert self.chunk.readline() == '1\n'
+        assert self.chunk.tell() == 2
+
+    def test_readlines(self):
+        assert self.chunk.readlines() == [
+            '1\n',
+            'line 2\n',
+            'does t'
+        ]
+
+    def test_size(self):
+        assert self.chunk.size() == 15
+
+    def test_tell(self):
+        assert self.chunk.tell() == 0
+        self.chunk.seek(5)
+        assert self.chunk.tell() == 5

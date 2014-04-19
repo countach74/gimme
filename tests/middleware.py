@@ -101,13 +101,13 @@ class CompressTest(MiddlewareTest):
         request, response = self.app.routes.match(self.environ)
         response._render()
         should_be = zlib.compress('endpoint1_response')
-        assert should_be == response.body
+        assert should_be == str(response.body)
 
     def test_not_accepted(self):
         del(self.environ['HTTP_ACCEPT_ENCODING'])
         request, response = self.app.routes.match(self.environ)
         response._render()
-        assert response.body == 'endpoint1_response'
+        assert str(response.body) == 'endpoint1_response'
 
 
 class BodyParserTest(MiddlewareTest):
