@@ -6,3 +6,6 @@ from .errors import HTTPError, HTTPRedirect, AbortRender
 from .routes import Route
 from .util import start_servers
 from .modulemonitor import ModuleMonitor
+
+
+__version__ = '0.1.4'
