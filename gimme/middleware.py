@@ -5,6 +5,7 @@ import sys
 import random
 import uuid
 import json as jsonlib
+import codecs
 from dogpile.cache import make_region
 from dogpile.cache.api import NO_VALUE
 from .parsers.multipart import MultipartParser
@@ -145,14 +146,15 @@ def static(path, expose_as='/'):
                 local_path = self._get_local_path(
                     self.request.headers.path_info)
                 if local_path:
-                    self.response.set('Content-Type', mimetypes.guess_type(
-                        local_path)[0])
+                    self.response.type = (mimetypes.guess_type(local_path)[0]
+                        or 'application/x-octet-stream')
                     self.response.status = 200
                     try:
-                        with open(local_path, 'r') as f:
-                            self.response.body = f.read()
+                        self.response.body = open(local_path, 'r')
                     except OSError, e:
                         pass
+                    else:
+                        self.response.locals._staticfile = True
                     finally:
                         raise AbortRender
 
@@ -163,6 +165,13 @@ def static(path, expose_as='/'):
                 return temp_path
             else:
                 return None
+
+        def exit(self):
+            if self.response.locals.get('_staticfile', False):
+                try:
+                    self.response.body.body.close()
+                except OSError:
+                    print "ERROR CLOSING FILE"
 
     return StaticMiddleware
 
@@ -355,7 +364,7 @@ def method_override():
     return MethodOverrideMiddleware
 
 
-def compress(types=['application/json', 'text/*']):
+def compress(types=['application/json', 'application/javascript', 'text/*']):
     '''
     Applies deflate compression and necessary headers to the response.
     '''
@@ -364,8 +373,7 @@ def compress(types=['application/json', 'text/*']):
     class CompressMiddleware(Middleware):
         def exit(self):
             try:
-                content_type = ContentType(
-                    str(self.response.headers['Content-Type']))
+                content_type = self.response.type
             except (ValueError, KeyError):
                 return
 

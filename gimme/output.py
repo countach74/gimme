@@ -40,7 +40,13 @@ class OutputBody(object):
         return ''.join(list(self))
 
     def __unicode__(self):
-        return u''.join(list(self))
+        result = []
+        for i in self:
+            if not isinstance(i, unicode):
+                result.append(unicode(i, self.response.charset, 'ignore'))
+            else:
+                result.append(i)
+        return u''.join(result)
 
     def set(self, data):
         self.body = data
