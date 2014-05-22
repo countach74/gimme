@@ -167,7 +167,7 @@ class RouteMapping(object):
         correspond to the URI being matched and the WSGI environ dict,
         respectively.
     '''
-    def __init__(self, pattern, middleware, method, match_fn=None):
+    def __init__(self, pattern, middleware, method, controller=None, match_fn=None):
         if isinstance(pattern, (list, tuple)):
             pattern = RouteList(pattern)
         elif isinstance(pattern, basestring):
@@ -177,6 +177,7 @@ class RouteMapping(object):
 
         self.pattern = pattern
         self.middleware = middleware
+        self.controller = controller
         self.method = method
         self.match_fn = match_fn
         
@@ -258,18 +259,26 @@ class Routes(object):
         self.__all = []
         
         self._sorted = False
+        self._controllers = {}
 
-        self.http404 = RouteMapping('*', [], ErrorController.http404)
-        self.http500 = RouteMapping('*', [], ErrorController.http500)
+        self.http404 = RouteMapping('*', [], ErrorController.http404, ErrorController(app))
+        self.http500 = RouteMapping('*', [], ErrorController.http500, ErrorController(app))
 
     def _add(self, routes_list, pattern, *args, **kwargs):
         middleware = list(args[:-1])
-        fn = kwargs['fn'] if 'fn' in kwargs else None
+        fn = kwargs.get('fn', None)
         try:
             method = args[-1]
         except IndexError, e:
             raise errors.RouteError("No controller method specified.")
-        routes_list.append(RouteMapping(pattern, middleware, method, fn))
+
+        controller_cls = method.im_class if hasattr(method, 'im_class') else None
+
+        if controller_cls and controller_cls not in self._controllers:
+            self._controllers[controller_cls] = controller_cls(self.app)
+        
+        routes_list.append(RouteMapping(pattern, middleware, method,
+            self._controllers.get(controller_cls, None), fn))
 
     def get(self, pattern, *args, **kwargs):
         '''
@@ -353,7 +362,7 @@ class Routes(object):
             match = i.match(environ, self.match_param)
             if match:
                 request = Request(self.app, environ, match)
-                response = Response(self.app, i, request)
+                response = Response(self.app, i)
                 return (request, response)
 
     def _sort(self):
@@ -401,5 +410,5 @@ class Routes(object):
             return result
 
         request = Request(self.app, environ, None)
-        response = Response(self.app, self.http404, request)
+        response = Response(self.app, self.http404)
         return (request, response)

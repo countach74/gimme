@@ -83,5 +83,5 @@ class ResponseTest(unittest.TestCase):
             'PATH_INFO': '/text',
             'REQUEST_METHOD': 'GET'
         })
-        response._render()
+        response._render(request)
         assert str(response.body) == "this is a text response"

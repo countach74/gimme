@@ -43,4 +43,4 @@ class Jinja2Engine(BaseEngine):
         self.environment = environment
 
     def render(self, template, data):
-        return self.environment.get_template(template).render(data)
+        return self.environment.get_template(template).render(data).encode('utf-8')

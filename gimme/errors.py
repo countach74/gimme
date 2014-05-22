@@ -41,10 +41,11 @@ class HTTPError(GimmeError):
         except AttributeError:
             method = controller.ErrorController.generic
 
-        self.route = gimme.routes.RouteMapping('*', [], method)
+        self.route = gimme.routes.RouteMapping('*', [], method,
+            controller.ErrorController(None))
 
-    def make_response(self, request):
-        res = response.Response(request.app, self.route, request)
+    def make_response(self, app):
+        res = response.Response(app, self.route)
         res.status = self.status.get()
         return res
 
@@ -54,8 +55,8 @@ class HTTPRedirect(HTTPError):
         self.url = url
         HTTPError.__init__(self, status)
 
-    def make_response(self, request):
-        res = response.Response(request.app, self.route, request)
+    def make_response(self, app):
+        res = response.Response(app, self.route)
         res.status = self.status.get()
         res.redirect(self.url, self.status.code)
         return res

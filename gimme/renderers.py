@@ -18,9 +18,9 @@ class BaseRenderer(object):
 
 
 class BulkRenderer(list, BaseRenderer):
-    def render(self, controller, data):
+    def render(self, controller, data, request, response):
         for i in self:
-            data = i.render(controller, data)
+            data = i.render(controller, data, request, response)
         return data
 
     def __repr__(self):
@@ -57,16 +57,16 @@ class Format(list, BaseRenderer):
                 return i.renderer
         raise IndexError("Could not find content_type: %s" % content_type)
 
-    def render(self, controller, data):
+    def render(self, controller, data, request, response):
         content_types = self.content_types
         try:
-            priority = (controller.request.accepted.filter(content_types)
+            priority = (request.accepted.filter(content_types)
                 .get_highest_priority()).value
         except IndexError:
             priority = self[0].content_type
         renderer = self.get_by_content_type(priority)
 
-        return renderer.render(controller, data)
+        return renderer.render(controller, data, request, response)
 
 
 class Template(BaseRenderer):
@@ -76,28 +76,28 @@ class Template(BaseRenderer):
     def __repr__(self):
         return "<Template(%s)>" % self.template_path
 
-    def render(self, controller, data):
+    def render(self, controller, data, request, response):
         app = controller.app
         return app.engine.render(self.template_path, data)
 
 
 class Json(BaseRenderer):
-    def render(self, controller, data):
-        controller.response.type = 'application/json'
+    def render(self, controller, data, request, response):
+        response.type = 'application/json'
         return dump_json(data)
 
 
 class Compress(BaseRenderer):
-    def render(self, controller, data):
-        if 'accept_encoding' in controller.request.headers:
+    def render(self, controller, data, request, response):
+        if 'accept_encoding' in request.headers:
             if ('deflate' in
-                    controller.request.headers.accept_encoding.split(',')):
+                    request.headers.accept_encoding.split(',')):
                 try:
                     compressed = zlib.compress(data)
                 except TypeError:
                     pass
                 else:
-                    controller.response.headers['Content-Encoding'] = 'deflate'
-                    controller.response.headers['Content-Length'] = str(len(compressed))
+                    response.headers['Content-Encoding'] = 'deflate'
+                    response.headers['Content-Length'] = str(len(compressed))
                     return compressed
         return data

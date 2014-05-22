@@ -10,7 +10,7 @@ from jinja2 import Environment, DictLoader
 class ControllerSetUp(object):
     def setUp(self):
         class TestController(Controller):
-            def index(self):
+            def index(self, request, response):
                 return {'this': 'is test data'}
 
         self.engine = Jinja2Engine(environment=
@@ -48,8 +48,8 @@ class ControllerMethodTest(ControllerSetUp, unittest.TestCase):
         assert isinstance(format_, Format)
 
     def test_call(self):
-        instantiated_controller = self.TestController(None, None, None)
-        result = self.TestController.index()
+        instantiated_controller = self.TestController(None)
+        result = self.TestController.index(None, None)
         assert result['this'] == 'is test data'
 
 
@@ -91,5 +91,5 @@ class MethodRendererTest(ControllerSetUp, unittest.TestCase):
 
     def test_call(self):
         # Need to instantiate the controller before templates can be rendered
-        controller = self.TestController(self.app, None, None)
-        assert self.method_renderer() == 'this is a test. is test data'
+        controller = self.TestController(self.app)
+        assert self.method_renderer(None, None) == 'this is a test. is test data'

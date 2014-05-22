@@ -11,14 +11,14 @@ class MiddlewareTest(unittest.TestCase):
         self.app = gimme.App()
 
         class TestController(gimme.Controller):
-            def endpoint1(self):
+            def endpoint1(self, request, response):
                 return 'endpoint1_response'
 
-            def endpoint2(self):
+            def endpoint2(self, request, response):
                 return {'test': 'data'}
 
-            def endpoint3(self):
-                return self.request.body
+            def endpoint3(self, request, response):
+                return request.body
 
         self.app.routes.get('/endpoint1', TestController.endpoint1)
         self.app.routes.get('/endpoint2', TestController.endpoint2)
@@ -44,7 +44,7 @@ class CookieParserTest(MiddlewareTest):
 
     def test_cookie_parser(self):
         request, response = self.app.routes.match(self.environ)
-        response._render()
+        response._render(request)
         assert hasattr(request, 'cookies')
         assert 'gimme_session' in request.cookies
         assert request.cookies.gimme_session == (
@@ -59,7 +59,7 @@ class SessionTest(MiddlewareTest):
 
     def test_session(self):
         request, response = self.app.routes.match(self.environ)
-        response._render()
+        response._render(request)
         request.session['test'] = 'zomg that is cool'
         assert request.session['test'] == 'zomg that is cool'
 
@@ -73,7 +73,7 @@ class JsonTest(MiddlewareTest):
 
     def test_json(self):
         request, response = self.app.routes.match(self.environ)
-        response._render()
+        response._render(request)
         assert 'simple' in request.body
         assert request.body.simple == 'json test'
 
@@ -87,7 +87,7 @@ class UrlEncodedTest(MiddlewareTest):
 
     def test_urlencoded(self):
         request, response = self.app.routes.match(self.environ)
-        response._render()
+        response._render(request)
         assert 'some_test' in request.body
         assert request.body.some_test == 'that is cool'
 
@@ -99,14 +99,14 @@ class CompressTest(MiddlewareTest):
 
     def test_compress(self):
         request, response = self.app.routes.match(self.environ)
-        response._render()
+        response._render(request)
         should_be = zlib.compress('endpoint1_response')
         assert should_be == str(response.body)
 
     def test_not_accepted(self):
         del(self.environ['HTTP_ACCEPT_ENCODING'])
         request, response = self.app.routes.match(self.environ)
-        response._render()
+        response._render(request)
         assert str(response.body) == 'endpoint1_response'
 
 
@@ -126,12 +126,12 @@ class BodyParserTest(MiddlewareTest):
 
     def test_json(self):
         request, response = self.app.routes.match(self.json_environ)
-        response._render()
+        response._render(request)
         assert 'something' in request.body
         assert request.body.something == 'cool'
 
     def test_url(self):
         request, response = self.app.routes.match(self.url_environ)
-        response._render()
+        response._render(request)
         assert 'something' in request.body
         assert request.body.something == 'cool2'

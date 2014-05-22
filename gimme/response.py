@@ -39,10 +39,9 @@ class Response(object):
     _charset_pattern = re.compile('(.*?); charset=(.*)$')
     mimetypes.init()
 
-    def __init__(self, app, route, request):
+    def __init__(self, app, route):
         self.app = app
         self.route = route
-        self.request = request
         self._status = StatusCode('200 OK')
         self._aborted = False
 
@@ -58,7 +57,7 @@ class Response(object):
         else:
             self._type = ContentType('text/html; charset=utf-8', True)
 
-        self._controller_class = (route.method.im_class
+        self._controller = (route.controller
             if hasattr(route.method, 'im_class') else None)
         self._body = OutputBody(self, '')
 
@@ -95,13 +94,13 @@ class Response(object):
     def status(self, status):
         self._status.set(status)
 
-    def _render(self, middleware=None):
-        if self._controller_class:
-            controller = self._controller_class(self.app, self.request, self)
+    def _render(self, request, middleware=None):
+        if self._controller:
+            controller = self._controller
             method = self.route.method
         else:
             controller = None
-            def method():
+            def method(request, response):
                 return self.route.method
 
         if middleware is None:
@@ -109,19 +108,21 @@ class Response(object):
         elif not middleware:
             middleware = []
 
-        self.instantiated_middleware = self._instantiate_middleware(middleware)
+        self.instantiated_middleware = self._instantiate_middleware(middleware, request)
 
         with nested(*self.instantiated_middleware):
             try:
                 if not self._aborted:
-                    self.body = method()
+                    self.body = method(request, self)
             except gimme.errors.AbortRender:
                 self._aborted = method
 
-    def _instantiate_middleware(self, middleware):
+        return controller
+
+    def _instantiate_middleware(self, middleware, request):
         result = []
         for i in middleware:
-            result.append(i(self.app, self.request, self))
+            result.append(i(self.app, request, self))
         return result
 
     def set(self, key, value):

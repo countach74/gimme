@@ -20,11 +20,11 @@ class WSGIAdapter(object):
         request, response = self.app.routes.match(environ)
 
         try:
-            response._render()
+            response._render(request)
         except Exception, e:
             err = e if isinstance(e, HTTPError) else HTTPError(500)
-            err_response = err.make_response(request)
-            err_response._render([])
+            err_response = err.make_response(self.app)
+            err_response._render(request, [])
 
             start_response(str(err_response.status), err_response.get_headers())
             return err_response.body

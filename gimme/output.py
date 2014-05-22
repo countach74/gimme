@@ -15,14 +15,17 @@ class OutputBody(object):
     def __iter__(self):
         if self.body_iterable:
             return self.body
-        elif isinstance(self.body, basestring):
+        elif isinstance(self.body, str):
             return self._make_iter()
         else:
             return self._make_iter(True)
 
     def _make_iter(self, convert_to_string=False):
-        data = self.body if not convert_to_string else unicode(self.body,
-            self.response.charset, 'ignore')
+        try:
+            data = self.body if not convert_to_string else unicode(self.body,
+                self.response.charset, 'ignore')
+        except TypeError:
+            data = self.body
         chunk = data[0:self.chunk_size]
         while chunk:
             if convert_to_string:

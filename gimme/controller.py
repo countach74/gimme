@@ -32,7 +32,7 @@ class MethodRenderer(list):
         self.__name__ = items[0].__name__
         list.__init__(self, items)
 
-    def __call__(self):
+    def __call__(self, request, response):
         '''
         Calls the :class:`ControllerMethod <gimme.controller.ControllerMethod>`
         and then calls :meth:`render` on each of the
@@ -41,10 +41,10 @@ class MethodRenderer(list):
         :return: The final output of the execution chain described above.
         '''
         controller = self[0].controller_instance
-        data = self[0]()
+        data = self[0](request, response)
 
         for i in self[1:]:
-            data = i.render(controller, data)
+            data = i.render(controller, data, request, response)
 
         return data
 
@@ -113,6 +113,10 @@ class MethodRenderer(list):
         self.append(Compress())
         return self
 
+    @property
+    def controllers(self):
+        return self[0].controllers
+
 
 class ControllerMethod(object):
     '''
@@ -138,8 +142,8 @@ class ControllerMethod(object):
         self.fn = fn
         self.__name__ = fn.__name__
 
-    def __call__(self):
-        return self.fn(self.controller_instance)
+    def __call__(self, request, response):
+        return self.fn(self.controller_instance, request, response)
 
     def __add__(self, other):
         '''
@@ -199,6 +203,10 @@ class ControllerMethod(object):
         '''
         return MethodRenderer([self, Compress()])
 
+    @property
+    def controllers(self):
+        return [self.controller_instance]
+
 
 class ControllerMeta(type):
     def __init__(mcs, name, bases, attrs):
@@ -246,15 +254,11 @@ class Controller(object):
     :class:`gimme.controller.ControllerMethod`.
 
     :ivar app: The gimme app.
-    :ivar request: The request object.
-    :ivar response: The response object.
     '''
     __metaclass__ = ControllerMeta
 
-    def __init__(self, app, request, response):
+    def __init__(self, app):
         self.app = app
-        self.request = request
-        self.response = response
 
     def __new__(cls, *args):
         obj = object.__new__(cls, *args)
@@ -273,28 +277,28 @@ class ErrorController(Controller):
         self.environment = Environment(
             loader=PackageLoader('gimme', 'templates'))
 
-    def http404(self):
-        self.response.status = 404
+    def http404(self, request, response):
+        response.status = 404
 
         return self.environment.get_template('errors/404.html').render({
-            'headers': self.request.headers,
-        }).encode(self.response.charset, 'ignore')
+            'headers': request.headers,
+        }).encode(response.charset, 'ignore')
 
-    def http500(self):
-        self.response.status = 500
+    def http500(self, request, response):
+        response.status = 500
         e_type, e_value, e_traceback = sys.exc_info()
         traceback.print_exception(e_type, e_value, e_traceback)
 
         return self.environment.get_template('errors/500.html').render({
             'message': "Oh snap! Something's borked. :(",
-            'headers': self.request.headers,
+            'headers': request.headers,
             'traceback': traceback.format_exception(
                 e_type,
                 e_value,
                 e_traceback)
-        }).encode(self.response.charset, 'ignore')
+        }).encode(response.charset, 'ignore')
 
-    def generic(self):
+    def generic(self, request, response):
         return self.environment.get_template('errors/generic.html').render({
-            'status': self.response._status
-        }).encode(self.response.charset, 'ignore')
+            'status': response._status
+        }).encode(response.charset, 'ignore')
