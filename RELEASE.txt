@@ -1,4 +1,4 @@
-Version 0.1.4 of gimme. 
+Version 1.0.0 of gimme. 
 
 Changes:
 
