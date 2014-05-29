@@ -14,7 +14,7 @@ class OutputBody(object):
 
     def __iter__(self):
         if self.body_iterable:
-            return self.body
+            return iter(self.body)
         elif isinstance(self.body, str):
             return self._make_iter()
         else:
