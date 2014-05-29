@@ -7,7 +7,6 @@ from gimme.request import Request
 class RequestTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
-        self.app = App()
         body = '{"test": "data"}'
         self.environ = test_helpers.make_environ(
             uri='http://www.google.com/somewhere/something?this=is+awesome',

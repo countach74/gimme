@@ -7,23 +7,15 @@ from . import test_helpers
 class ResponseTest(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         unittest.TestCase.__init__(self, *args, **kwargs)
-        self.app = gimme.App()
+
         body = '{"test": "data"}'
-        self.environ = test_helpers.make_environ(
-            body=body, method='POST')
-        self.environ['HTTP_CONTENT_TYPE'] = 'application/json'
-        self.environ['HTTP_CONTENT_LENGTH'] = str(len(body))
-        self.environ['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest'
-        self.environ['HTTP_COOKIE'] = 'cookie_test=some_cookie_to_delete'
-        
-        class TestController(gimme.Controller):
-            def endpoint1(self):
-                return 'endpoint1_response'
 
-        self.controller = TestController
-        self.app.routes.post('/', self.controller.endpoint1)
-
-        self.request, self.response, self.route = self.app.routes.match(self.environ)
+        self.response = gimme.Response(200, {
+            'http_content_type': 'application/json',
+            'http_content_length': str(len(body)),
+            'http_x_requested_with': 'XMLHttpRequest',
+            'http_cookie': 'cookie_test=some_cookie_to_delete'
+        })
 
     def test_set_get(self):
         self.response.set('Content-Type', 'text/plain')
