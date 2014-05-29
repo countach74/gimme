@@ -16,7 +16,7 @@ class RoutesTest(unittest.TestCase):
   def test_query_string(self):
     self.app.routes.get('/', self.controller.endpoint1) 
 
-    request, response = self.app.routes.match(make_environ(
+    request, response, route = self.app.routes.match(make_environ(
         uri='/?id=3'))
 
     self.assertEqual(request.query.id, '3')
@@ -24,7 +24,7 @@ class RoutesTest(unittest.TestCase):
   def test_param(self):
     self.app.routes.get('/user/:id', self.controller.endpoint1)
     
-    request, response = self.app.routes.match(make_environ(
+    request, response, route = self.app.routes.match(make_environ(
         uri='/user/4'))
 
     self.assertEqual(request.params.id, '4')
@@ -32,10 +32,10 @@ class RoutesTest(unittest.TestCase):
   def test_optional_param(self):
     self.app.routes.get('/user/:id/:message?', self.controller.endpoint1)
 
-    request, response = self.app.routes.match(make_environ(
+    request, response, route = self.app.routes.match(make_environ(
         uri='/user/3/4'))
 
-    request2, response2 = self.app.routes.match(make_environ(
+    request2, response2, route2 = self.app.routes.match(make_environ(
         uri='/user/3'))
 
     self.assertEqual(request.params.id, '3')

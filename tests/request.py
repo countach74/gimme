@@ -15,7 +15,7 @@ class RequestTest(unittest.TestCase):
         self.environ['HTTP_CONTENT_TYPE'] = 'application/json'
         self.environ['HTTP_CONTENT_LENGTH'] = str(len(body))
         self.environ['HTTP_X_REQUESTED_WITH'] = 'XMLHttpRequest'
-        self.request = Request(self.app, self.environ)
+        self.request = Request(self.environ)
 
     def setUp(self):
         pass

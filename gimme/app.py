@@ -55,16 +55,16 @@ class App(object):
         self.engine = engine
 
         self.middleware = []
-        self.__wsgi = WSGIAdapter(self)
-        self.__env_config = {}
+        self._wsgi = WSGIAdapter(self)
+        self._env_config = {}
 
         self.dirname = os.path.dirname(os.path.abspath(sys.argv[0]))
 
         # Dictionary to store defined params
-        self.__params = {}
+        self._params = {}
 
         # Dictionary to store app config
-        self.__config = {
+        self._config = {
             'env': 'development',
             'default headers': {
                 'Content-Type': 'text/html; charset=UTF-8',
@@ -76,7 +76,7 @@ class App(object):
     def __call__(self, environ, start_response):
         # Disabled because sort is not implemented in a very useful way (yet)
         # self.routes._sort()
-        return self.__wsgi.process(environ, start_response)
+        return self._wsgi.process(environ, start_response)
 
     def listen(self, host='127.0.0.1', port=8080, server_class=WSGIServer):
         '''
@@ -118,7 +118,7 @@ class App(object):
         :param key: The key to store under.
         :param value: The value to store.
         '''
-        self.__config[key] = value
+        self._config[key] = value
 
     def get(self, key, default=None):
         '''
@@ -127,10 +127,10 @@ class App(object):
 
         :param key: The key to fetch
         '''
-        return self.__config.get(key, default)
+        return self._config.get(key, default)
 
     def param(self, name, callback):
         self.params[name] = callback
 
     def configure(self, env, callback):
-        self.__env_config[env] = callback
+        self._env_config[env] = callback

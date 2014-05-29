@@ -22,9 +22,8 @@ class ResponseTest(unittest.TestCase):
 
         self.controller = TestController
         self.app.routes.post('/', self.controller.endpoint1)
-        self.app.routes.get('/text', "this is a text response")
 
-        self.request, self.response = self.app.routes.match(self.environ)
+        self.request, self.response, self.route = self.app.routes.match(self.environ)
 
     def test_set_get(self):
         self.response.set('Content-Type', 'text/plain')
@@ -77,11 +76,3 @@ class ResponseTest(unittest.TestCase):
         assert self.response.headers['Link'] == (
             '<http://apple.com>; rel="prev", '
             '<http://google.com>; rel="next"')
-
-    def test_text(self):
-        request, response = self.app.routes.match({
-            'PATH_INFO': '/text',
-            'REQUEST_METHOD': 'GET'
-        })
-        response._render(request)
-        assert str(response.body) == "this is a text response"

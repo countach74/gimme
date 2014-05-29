@@ -43,8 +43,8 @@ class CookieParserTest(MiddlewareTest):
         self.environ = make_environ('GET', '/endpoint1')
 
     def test_cookie_parser(self):
-        request, response = self.app.routes.match(self.environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.environ)
+        self.app._wsgi._render(request, response, route)
         assert hasattr(request, 'cookies')
         assert 'gimme_session' in request.cookies
         assert request.cookies.gimme_session == (
@@ -58,8 +58,8 @@ class SessionTest(MiddlewareTest):
         self.environ = make_environ('GET', '/endpoint1')
 
     def test_session(self):
-        request, response = self.app.routes.match(self.environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.environ)
+        self.app._wsgi._render(request, response, route)
         request.session['test'] = 'zomg that is cool'
         assert request.session['test'] == 'zomg that is cool'
 
@@ -72,8 +72,8 @@ class JsonTest(MiddlewareTest):
         self.environ['HTTP_CONTENT_TYPE'] = 'application/json'
 
     def test_json(self):
-        request, response = self.app.routes.match(self.environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.environ)
+        self.app._wsgi._render(request, response, route)
         assert 'simple' in request.body
         assert request.body.simple == 'json test'
 
@@ -86,8 +86,8 @@ class UrlEncodedTest(MiddlewareTest):
         self.environ['HTTP_CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
 
     def test_urlencoded(self):
-        request, response = self.app.routes.match(self.environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.environ)
+        self.app._wsgi._render(request, response, route)
         assert 'some_test' in request.body
         assert request.body.some_test == 'that is cool'
 
@@ -98,15 +98,15 @@ class CompressTest(MiddlewareTest):
         self.environ = make_environ('GET', '/endpoint1')
 
     def test_compress(self):
-        request, response = self.app.routes.match(self.environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.environ)
+        self.app._wsgi._render(request, response, route)
         should_be = zlib.compress('endpoint1_response')
         assert should_be == str(response.body)
 
     def test_not_accepted(self):
         del(self.environ['HTTP_ACCEPT_ENCODING'])
-        request, response = self.app.routes.match(self.environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.environ)
+        self.app._wsgi._render(request, response, route)
         assert str(response.body) == 'endpoint1_response'
 
 
@@ -125,13 +125,13 @@ class BodyParserTest(MiddlewareTest):
         self.url_environ['HTTP_CONTENT_TYPE'] = 'application/x-www-form-urlencoded'
 
     def test_json(self):
-        request, response = self.app.routes.match(self.json_environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.json_environ)
+        self.app._wsgi._render(request, response, route)
         assert 'something' in request.body
         assert request.body.something == 'cool'
 
     def test_url(self):
-        request, response = self.app.routes.match(self.url_environ)
-        response._render(request)
+        request, response, route = self.app.routes.match(self.url_environ)
+        self.app._wsgi._render(request, response, route)
         assert 'something' in request.body
         assert request.body.something == 'cool2'

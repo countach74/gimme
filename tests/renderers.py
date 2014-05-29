@@ -28,7 +28,7 @@ class RendererSetUp(object):
         )
         self.app = gimme.App(engine=self.engine)
         self.app.routes.get('/', TestController.index)
-        self.request, self.response = self.app.routes.match({
+        self.request, self.response, self.route = self.app.routes.match({
             'PATH_INFO': '/',
             'REQUEST_METHOD': 'GET',
             'HTTP_ACCEPT_ENCODING': 'deflate'
@@ -75,13 +75,13 @@ class FormatTest(RendererSetUp, unittest.TestCase):
         html_renderer = Format(Template('index.html'), 'text/html')
         json_renderer = Format(Json(), 'application/json')
 
-        html_request, html_response = self.app.routes.match({
+        html_request, html_response, html_route = self.app.routes.match({
             'PATH_INFO': '/',
             'REQUEST_METHOD': 'GET',
             'HTTP_ACCEPT': 'text/html'
         })
 
-        json_request, json_response = self.app.routes.match({
+        json_request, json_response, json_route = self.app.routes.match({
             'PATH_INFO': '/',
             'REQUEST_METHOD': 'GET',
             'HTTP_ACCEPT': 'application/json'
