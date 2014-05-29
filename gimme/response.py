@@ -19,7 +19,7 @@ from .output import OutputBody
 import gimme.errors
 
 
-class Response(object):
+class Response(Exception):
     '''
     The Response class is responsible for aggregating all of the information
     required for generating a response and for rendering said response.

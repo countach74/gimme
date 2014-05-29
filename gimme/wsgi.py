@@ -27,12 +27,15 @@ class WSGIAdapter(object):
         try:
             self._render(request, response, route)
         except Exception, e:
-            err = e if isinstance(e, HTTPError) else HTTPError(500)
-            err_response, err_route = err.make_response(self.app)
-            self._render(request, err_response, err_route, [])
-
-            start_response(str(err_response.status), err_response.get_headers())
-            return err_response.body
+            if isinstance(e, Response):
+                start_response(str(e.status), e.get_headers())
+                return e.body
+            else:
+                err = e if isinstance(e, HTTPError) else HTTPError(500)
+                err_response, err_route = err.make_response(self.app)
+                self._render(request, err_response, err_route, [])
+                start_response(str(err_response.status), err_response.get_headers())
+                return err_response.body
         else:
             start_response(str(response.status), response.get_headers())
             return response.body
