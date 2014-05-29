@@ -34,10 +34,10 @@ class AbortRender(GimmeError):
 
 class HTTPError(GimmeError):
     def __init__(self, status=500):
-        self.status = StatusCode(status)
+        self.status = status
         try:
             method = getattr(controller.ErrorController, 'http%s'
-                % self.status.code)
+                % self.status)
         except AttributeError:
             method = controller.ErrorController.generic
 
@@ -45,9 +45,8 @@ class HTTPError(GimmeError):
             controller.ErrorController(None))
 
     def make_response(self, app):
-        res = response.Response(app, self.route)
-        res.status = self.status.get()
-        return res
+        res = response.Response(self.status)
+        return (res, self.route)
 
 
 class HTTPRedirect(HTTPError):
@@ -56,7 +55,6 @@ class HTTPRedirect(HTTPError):
         HTTPError.__init__(self, status)
 
     def make_response(self, app):
-        res = response.Response(app, self.route)
-        res.status = self.status.get()
+        res = response.Response(self.status)
         res.redirect(self.url, self.status.code)
-        return res
+        return (res, self.route)

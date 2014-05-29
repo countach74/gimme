@@ -36,12 +36,11 @@ class Request(object):
     '''
     _host_pattern = re.compile('^([^:]*)(:[0-9]+)?')
 
-    def __init__(self, app, environ, match=None):
-        self.app = app
+    def __init__(self, environ, params=None):
         self.environ = environ
         self.headers = RequestHeaders()
         self.wsgi = RequestHeaders()
-        self.params = DotDict(match.match.groupdict() if match else {})
+        self.params = params or DotDict()
         self.__raw_body = None
 
         self._populate_headers(environ)

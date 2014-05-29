@@ -3,29 +3,6 @@ import app as app_
 import routes as routes_
 
 
-class FauxMethod(object):
-    pass
-
-
-class instantiate_controller(object):
-    def __init__(self, controller, app=None, middleware=[], uri='/test_endpoint', method='GET'):
-        self.__controller = controller
-        self.__app = app or app_.App()
-        self.__middleware = middleware
-        self.__uri = uri
-        self.__method = method
-
-    def __getattr__(self, key):
-        routes = routes_.Routes(self.__app)
-        routes.all(self.__uri, getattr(self.__controller, key))
-        request, response = routes.match({
-          'PATH_INFO': self.__uri,
-          'REQUEST_METHOD': self.__method
-        })
-        controller = response._render(self.__middleware)
-        return getattr(controller, key)
-
-
 def start_servers(servers):
     greenlets = []
     for i in servers:

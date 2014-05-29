@@ -2,6 +2,7 @@ import re
 from . import errors
 from .request import Request
 from .response import Response
+from .dotdict import DotDict
 from .controller import ErrorController
 
 
@@ -361,9 +362,13 @@ class Routes(object):
         for i in match_list:
             match = i.match(environ, self.match_param)
             if match:
-                request = Request(self.app, environ, match)
-                response = Response(self.app, i)
-                return (request, response)
+                params = DotDict(match.match.groupdict())
+                default_headers = dict(self.app.get('default headers', []))
+
+                request = Request(environ, params)
+                response = Response(200, default_headers)
+
+                return (request, response, i)
 
     def _sort(self):
         if not self._sorted:
@@ -409,6 +414,7 @@ class Routes(object):
         if result:
             return result
 
-        request = Request(self.app, environ, None)
-        response = Response(self.app, self.http404)
-        return (request, response)
+        request = Request(environ, None)
+        response = Response(404)
+
+        return (request, response, self.http404)

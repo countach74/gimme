@@ -39,16 +39,11 @@ class Response(object):
     _charset_pattern = re.compile('(.*?); charset=(.*)$')
     mimetypes.init()
 
-    def __init__(self, app, route):
-        self.app = app
-        self.route = route
-        self._status = StatusCode('200 OK')
+    def __init__(self, status=200, headers=None, body=''):
+        self._status = StatusCode(status)
         self._aborted = False
 
-        try:
-            self.headers = ResponseHeaders(dict(app.get('default headers')))
-        except KeyError, e:
-            self.headers = ResponseHeaders()
+        self.headers = ResponseHeaders(headers or {})
 
         content_type = self.headers.get('Content-Type', None)
 
@@ -57,12 +52,13 @@ class Response(object):
         else:
             self._type = ContentType('text/html; charset=utf-8', True)
 
-        self._controller = (route.controller
-            if hasattr(route.method, 'im_class') else None)
-        self._body = OutputBody(self, '')
+        self._body = OutputBody(self, body)
 
         # Storage for request-specific local data
         self.locals = DotDict()
+
+        # This will be populated later by WSGIAdapter._render
+        self._instantiated_middleware = []
 
     @property
     def body(self):
@@ -93,37 +89,6 @@ class Response(object):
     @status.setter
     def status(self, status):
         self._status.set(status)
-
-    def _render(self, request, middleware=None):
-        if self._controller:
-            controller = self._controller
-            method = self.route.method
-        else:
-            controller = None
-            def method(request, response):
-                return self.route.method
-
-        if middleware is None:
-            middleware = (self.app._middleware + self.route.middleware)
-        elif not middleware:
-            middleware = []
-
-        self.instantiated_middleware = self._instantiate_middleware(middleware, request)
-
-        with nested(*self.instantiated_middleware):
-            try:
-                if not self._aborted:
-                    self.body = method(request, self)
-            except gimme.errors.AbortRender:
-                self._aborted = method
-
-        return controller
-
-    def _instantiate_middleware(self, middleware, request):
-        result = []
-        for i in middleware:
-            result.append(i(self.app, request, self))
-        return result
 
     def set(self, key, value):
         '''

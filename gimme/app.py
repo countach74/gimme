@@ -54,7 +54,7 @@ class App(object):
         self.routes = Routes(self)
         self.engine = engine
 
-        self._middleware = []
+        self.middleware = []
         self.__wsgi = WSGIAdapter(self)
         self.__env_config = {}
 
@@ -108,7 +108,7 @@ class App(object):
 
         :param middleware: The middleware to add to the app.
         '''
-        self._middleware.append(middleware)
+        self.middleware.append(middleware)
 
     def set(self, key, value):
         '''
@@ -120,14 +120,14 @@ class App(object):
         '''
         self.__config[key] = value
 
-    def get(self, key):
+    def get(self, key, default=None):
         '''
         Gets a key from the app, previously set with
         :meth:`set() <gimme.app.App.set>`.
 
         :param key: The key to fetch
         '''
-        return self.__config[key]
+        return self.__config.get(key, default)
 
     def param(self, name, callback):
         self.params[name] = callback

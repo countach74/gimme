@@ -85,9 +85,9 @@ class Middleware(object):
         if not self.response._aborted:
             return True
         else:
-            index_self = self.response.instantiated_middleware.index(self)
+            index_self = self.response._instantiated_middleware.index(self)
             try:
-                index_aborted = self.response.instantiated_middleware.index(
+                index_aborted = self.response._instantiated_middleware.index(
                     self.response._aborted)
             except ValueError:
                 index_aborted = -1
