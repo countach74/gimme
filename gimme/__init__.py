@@ -13,4 +13,4 @@ from .response import Response
 inject = middleware.inject
 
 
-__version__ = '1.1.0'
+__version__ = '1.1.1'
