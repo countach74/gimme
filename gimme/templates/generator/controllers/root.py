@@ -1,10 +1,10 @@
 import gimme
 
 
-class RootController(gimme.Controller):
-    def index(self):
+class Root(gimme.Controller):
+    def index(self, request, response):
         return {}
 
-    def catch_all(self):
-        self.response.status = 404
+    def catch_all(self, request, response):
+        response.status = 404
         return {}

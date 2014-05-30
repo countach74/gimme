@@ -1,13 +1,9 @@
-Version 1.0.0 of gimme. 
+Version 1.0.1 of gimme. 
 
 Changes:
 
- - Reworked Request and Response objects to not be so tightly coupled,
-   allowing for easier testing.
+ - Worked a bit on the README.md file (updated examples so that they
+   actually work).
 
- - The above change has consequences for how controller methods should be
-   created. Request and response objects are now passed to controller methods,
-   instead of being accessed via controller attributes. 
-
- - Controllers are now instantiated once, upon being added to an application
-   via route definition.
+ - Fixed the generator code so that it works with some of the recent API
+   changes.

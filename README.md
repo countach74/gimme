@@ -3,22 +3,33 @@ Gimme
 
 A Python web framework that is very loosely based on Express JS.
 
-Gimme's API is essentially a Pythonified version of Express (although
-not asynchronous in nature). For example, a very simple application
-might look something like this:
+Gimme is a simplistic Python web framework that looks a little bit like
+Express JS, in that it has middleware and that some of the middleware and
+other API calls are named similarly. It is intended to be deployed via some
+sort of gevent-driven WSGI server and contains hooks to make doing so even
+easier than normal.
+
+
+Getting started is easy. Either clone from github and install or install via
+pip:
+
+```
+pip install gimme
+```
+
+
+Using it's pretty easy, too.
 
 
 ```python
 import gimme
   
 class RootController(gimme.Controller):
-  def index(self):
-    # request, response and app objects are made available to the
-    # controllers via self.request, self.response, and self.app
-    if 'visits' in self.requests.session:
-      self.request.session['visits'] += 1
+  def index(self, request, response):
+    if 'visits' in requests.session:
+      request.session['visits'] += 1
     else:
-      self.requests.session['visits'] = 1
+      requests.session['visits'] = 1
       
     return {'some data': 'hello, world!'}
     
@@ -71,22 +82,16 @@ if __name__ == '__main__':
   app.listen()
 ```
 
+The above is quite a lot to type each time you want to start a new project,
+so there's also a "gimme" tool for generating boilerplate stuff:
+
+```
+gimme -s your_app
+```
+
+(Creates a new project with session support.)
+
 By default, Jinja2 is used for a template engine, but other adapters
 can be written as well. More documentation to come on how to do this
 (until then, check out the gimme/engines.py file). Engines are passed
 to the App object on instantiation: `app = App(engine=your_engine)`.
-
-One thing to note is that Gimme's HTTP server is, unlike Node's, a
-development server and is not intended to be used for production.
-Instead, Gimme apps are WSGI-compliant; you are recommended to pick
-any one of the many ways of deploying a WSGI app (personally, I
-recommend FastCGI via Lighttpd).
-
-Using flup, one can turn the above example into a FastCGI app like so:
-
-```python
-from flup.server.fcgi import WSGIServer
-
-if __name__ == '__main__':
-  WSGIServer(app).run()
-```
