@@ -37,8 +37,7 @@ class Jinja2Engine(BaseEngine):
         app_path = os.path.dirname(os.path.abspath(sys.argv[0]))
         if not environment:
             environment = Environment(loader=ChoiceLoader([
-                FileSystemLoader(os.path.join(app_path, template_path)),
-                PackageLoader('gimme', 'templates')
+                FileSystemLoader(os.path.join(app_path, template_path))
             ]))
         self.environment = environment
 

@@ -1,3 +1,9 @@
-Version 1.1.0 of gimme. 
+Version 1.0.1 of gimme. 
 
 Changes:
+
+ - Worked a bit on the README.md file (updated examples so that they
+   actually work).
+
+ - Fixed the generator code so that it works with some of the recent API
+   changes.
