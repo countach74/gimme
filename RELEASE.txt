@@ -1,9 +1,10 @@
-Version 1.0.1 of gimme. 
+Version 1.1.0 of gimme. 
 
 Changes:
 
- - Worked a bit on the README.md file (updated examples so that they
-   actually work).
+ - Added inject(), which hacks middleware into providing dependency injection.
+   W00t!
 
- - Fixed the generator code so that it works with some of the recent API
-   changes.
+ - Also changed some things about how some core classes are instantiated. For
+   example, Controllers and Requests can now be instantiated without any
+   parameters

@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='gimme',
-    version='1.0.1',
+    version='1.1.0',
     packages=[
         'gimme',
         'gimme.ext',

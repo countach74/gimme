@@ -109,6 +109,30 @@ class Middleware(object):
         pass
 
 
+def inject(fn, name=None):
+    class Injected(Middleware):
+        def __init__(self, name=None, *args, **kwargs):
+            self._name = name
+            Middleware.__init__(self, *args, **kwargs)
+
+        def enter(self):
+            resolved = fn(self.request)
+            if self._name:
+                self.request.data[self._name] = resolved
+
+    class Wrapper(object):
+        def __init__(self, name):
+            self._name = name
+
+        def __call__(self, *args, **kwargs):
+            return Injected(self._name, *args, **kwargs)
+
+        def name(self, name):
+            return Wrapper(name)
+
+    return Wrapper(name)
+
+
 def connection_helper(connection='close'):
     class ConnectionHelperMiddleware(Middleware):
         def exit(self):

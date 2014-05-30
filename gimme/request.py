@@ -36,14 +36,14 @@ class Request(object):
     '''
     _host_pattern = re.compile('^([^:]*)(:[0-9]+)?')
 
-    def __init__(self, environ, params=None):
-        self.environ = environ
+    def __init__(self, environ=None, params=None):
+        self.environ = environ or {}
         self.headers = RequestHeaders()
         self.wsgi = RequestHeaders()
         self.params = params or DotDict()
         self.__raw_body = None
 
-        self._populate_headers(environ)
+        self._populate_headers(self.environ)
 
         self.query = QueryString(self.headers.get('query_string', ''))
 
@@ -59,6 +59,8 @@ class Request(object):
         self.cookies = self.headers.get('cookie', '')
         self.type = (ContentType(self.headers.content_type) if 'content_type'
             in self.headers else None)
+
+        self.data = DotDict()
 
     def _populate_headers(self, environ):
         for k, v in environ.iteritems():

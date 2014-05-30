@@ -257,7 +257,7 @@ class Controller(object):
     '''
     __metaclass__ = ControllerMeta
 
-    def __init__(self, app):
+    def __init__(self, app=None):
         self.app = app
 
     def __new__(cls, *args):

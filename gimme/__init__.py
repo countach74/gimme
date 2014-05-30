@@ -10,4 +10,7 @@ from .request import Request
 from .response import Response
 
 
-__version__ = '0.1.4'
+inject = middleware.inject
+
+
+__version__ = '1.1.0'
