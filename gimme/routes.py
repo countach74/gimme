@@ -79,16 +79,20 @@ class Route(object):
         ``/somewhere`` or ``/somewhere/:param1``), or a regex as created with
         :func:`re.compile`. 
     '''
-    __sub_pattern = re.compile(':([a-zA-Z_\-0-9]+)(\?)?')
-    __sub_last_pattern = re.compile('\/:([a-zA-Z_\-0-9]+)(\?)?$')
+    _sub_pattern = re.compile(':([a-zA-Z_\-0-9]+)(\?)?')
+    _sub_last_pattern = re.compile('\/:([a-zA-Z_\-0-9]+)(\?)?$')
+    _strip_pattern = re.compile('\(\?\(__last\)(.*?)\)\(\/\)\?\$$')
+    _param_pattern = re.compile('\(\?P\<([a-zA-Z_][a-zA-Z0-9_]*)\>(.*?)\)')
 
     def __init__(self, regex, priority=10):
         self.priority = priority
         
-        if isinstance(regex, str):
+        if isinstance(regex, basestring):
             self._regex = self._make_regex(regex)
         else:
             self._regex = regex
+
+        self._routes = None
  
     def __gt__(self, other):
         return self.priority > other.priority
@@ -131,8 +135,8 @@ class Route(object):
                 match.group(1),
                 match.group(2) or '')
 
-        pattern = self.__sub_last_pattern.sub(handle_last_replace, string)
-        pattern = '^%s$' % self.__sub_pattern.sub(handle_replace, pattern)
+        pattern = self._sub_last_pattern.sub(handle_last_replace, string)
+        pattern = '^%s$' % self._sub_pattern.sub(handle_replace, pattern)
         return re.compile(pattern)
 
     def __or__(self, other):
@@ -144,6 +148,27 @@ class Route(object):
         :return: An instance of :class:`RouteList <gimme.routes.RouteList>`.
         '''
         return RouteList([self, other])
+
+    def reverse(self, params):
+        orig_pattern = self._regex.pattern
+
+        # Need to strip out a bunch of stuff that gimme adds to routes
+        pattern = orig_pattern.replace('(?P<__last>/)?', '/')
+        pattern = self._strip_pattern.sub('\\1', pattern)
+
+        string = (self._param_pattern.sub('{\\1}', pattern).format(**params)
+            .lstrip('^').rstrip('$'))
+
+        return string if len(string) == 1 else string.rstrip('/')
+
+    def name(self, name):
+        if not self._routes:
+            raise TypeError("Route not bound to a Routes object.")
+
+        self._name = name
+        self._routes._reverse_routes[name] = self
+
+        return self
 
 
 class RouteMapping(object):
@@ -168,36 +193,31 @@ class RouteMapping(object):
         correspond to the URI being matched and the WSGI environ dict,
         respectively.
     '''
-    def __init__(self, pattern, middleware, method, controller=None, match_fn=None):
-        if isinstance(pattern, (list, tuple)):
-            pattern = RouteList(pattern)
-        elif isinstance(pattern, basestring):
-            pattern = Route(pattern)
-        elif not isinstance(pattern, (Route, RouteList)):
-            raise ValueError("Invalid pattern: %s" % pattern)
-
-        self.pattern = pattern
+    def __init__(self, route, middleware, method, controller=None,
+            match_fn=None):
+        self.route = route
         self.middleware = middleware
         self.controller = controller
         self.method = method
         self.match_fn = match_fn
+        self._name = None
         
     def __gt__(self, other):
-        return self.pattern > other.pattern
+        return self.route > other.route
       
     def __lt__(self, other):
         return not self.__gt__(other)
       
     def __eq__(self, other):
         return (
-            self.pattern == other.pattern and 
+            self.route == other.route and 
             self.middleware == other.middleware and
             self.method == other.method and
             self.match_fn == other.match_fn
         )
     
     def __repr__(self):
-        return "<RouteMapping(%s, %s, %s, %s)>" % (self.pattern,
+        return "<RouteMapping(%s, %s, %s, %s)>" % (self.route,
             self.middleware, self.method, self.match_fn)
 
     def match(self, environ, match_param='PATH_INFO', context='SCRIPT_NAME'):
@@ -222,7 +242,7 @@ class RouteMapping(object):
 
         if not self.match_fn or (self.match_fn and
                 self.match_fn(relative_uri, environ)):
-            return self.pattern.match(relative_uri)
+            return self.route.match(relative_uri)
 
 
 class Routes(object):
@@ -253,17 +273,20 @@ class Routes(object):
         self.match_param = match_param
         self.strip_trailing_slash = strip_trailing_slash
 
-        self.__get = []
-        self.__post = []
-        self.__put = []
-        self.__delete = []
-        self.__all = []
+        self._get = []
+        self._post = []
+        self._put = []
+        self._delete = []
+        self._all = []
         
         self._sorted = False
         self._controllers = {}
+        self._reverse_routes = {}
 
-        self.http404 = RouteMapping('*', [], ErrorController.http404, ErrorController(app))
-        self.http500 = RouteMapping('*', [], ErrorController.http500, ErrorController(app))
+        self.http404 = RouteMapping('*', [], ErrorController.http404,
+            ErrorController(app))
+        self.http500 = RouteMapping('*', [], ErrorController.http500,
+            ErrorController(app))
 
     def _add(self, routes_list, pattern, *args, **kwargs):
         middleware = list(args[:-1])
@@ -277,9 +300,26 @@ class Routes(object):
 
         if controller_cls and controller_cls not in self._controllers:
             self._controllers[controller_cls] = controller_cls(self.app)
-        
-        routes_list.append(RouteMapping(pattern, middleware, method,
-            self._controllers.get(controller_cls, None), fn))
+
+        route = self._make_route(pattern)
+        route_mapping = RouteMapping(route, middleware, method,
+            self._controllers.get(controller_cls, None), fn)
+
+        # Bind the route to this Routes object for naming purposes
+        route._routes = self
+
+        routes_list.append(route_mapping)
+
+        return route
+
+    def _make_route(self, pattern):
+        if isinstance(pattern, (list, tuple)):
+            route = RouteList(pattern)
+        elif isinstance(pattern, basestring):
+            route = Route(pattern)
+        elif not isinstance(pattern, (Route, RouteList)):
+            raise ValueError("Invalid pattern: %s" % pattern)
+        return route
 
     def get(self, pattern, *args, **kwargs):
         '''
@@ -324,7 +364,7 @@ class Routes(object):
             :class:`RouteMapping <gimme.routes.RouteMapping>` object's
             constructor via the ``match_fn`` parameter.
         '''
-        self._add(self.__get, pattern, *args, **kwargs)
+        return self._add(self._get, pattern, *args, **kwargs)
 
     def post(self, pattern, *args, **kwargs):
         '''
@@ -332,7 +372,7 @@ class Routes(object):
 
         Please reference :meth:`gimme.routes.Routes.get` for more information.
         '''
-        self._add(self.__post, pattern, *args, **kwargs)
+        return self._add(self._post, pattern, *args, **kwargs)
 
     def put(self, pattern, *args, **kwargs):
         '''
@@ -340,7 +380,7 @@ class Routes(object):
 
         Please reference :meth:`gimme.routes.Routes.get` for more information.
         '''
-        self._add(self.__put, pattern, *args, **kwargs)
+        return self._add(self._put, pattern, *args, **kwargs)
 
     def delete(self, pattern, *args, **kwargs):
         '''
@@ -348,7 +388,7 @@ class Routes(object):
 
         Please reference :meth:`gimme.routes.Routes.get` for more information.
         '''
-        self._add(self.__delete, pattern, *args, **kwargs)
+        return self._add(self._delete, pattern, *args, **kwargs)
 
     def all(self, pattern, *args, **kwargs):
         '''
@@ -356,7 +396,7 @@ class Routes(object):
 
         Please reference :meth:`gimme.routes.Routes.get` for more information.
         '''
-        self._add(self.__all, pattern, *args, **kwargs)
+        return self._add(self._all, pattern, *args, **kwargs)
 
     def _find_match(self, environ, match_list):
         for i in match_list:
@@ -372,11 +412,11 @@ class Routes(object):
 
     def _sort(self):
         if not self._sorted:
-            self.__get.sort(reverse=True)
-            self.__post.sort(reverse=True)
-            self.__put.sort(reverse=True)
-            self.__delete.sort(reverse=True)
-            self.__all.sort(reverse=True)
+            self._get.sort(reverse=True)
+            self._post.sort(reverse=True)
+            self._put.sort(reverse=True)
+            self._delete.sort(reverse=True)
+            self._all.sort(reverse=True)
             self._sorted = True
 
     def match(self, environ):
@@ -396,10 +436,10 @@ class Routes(object):
             :class:`Response <gimme.response.Response>` objects.
         '''
         request_methods = {
-            'GET': self.__get,
-            'POST': self.__post,
-            'PUT': self.__put,
-            'DELETE': self.__delete
+            'GET': self._get,
+            'POST': self._post,
+            'PUT': self._put,
+            'DELETE': self._delete
         }
 
         request_method = environ['REQUEST_METHOD'].upper()
@@ -410,7 +450,7 @@ class Routes(object):
             if result:
                 return result
 
-        result = self._find_match(environ, self.__all)
+        result = self._find_match(environ, self._all)
         if result:
             return result
 
@@ -418,3 +458,6 @@ class Routes(object):
         response = Response(404)
 
         return (request, response, self.http404)
+
+    def get_route_by_name(self, name):
+        return self._reverse_routes[name]
