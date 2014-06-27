@@ -103,6 +103,8 @@ class HeadersDict(object):
             self[key] = value
 
     def add_header(self, header):
+        if isinstance(header, tuple):
+            header = Header(*header)
         self._headers.append(header)
 
     def del_header(self, header):

@@ -151,7 +151,7 @@ class Session(object):
         Actually, this just calls :meth:`save
         <gimme.ext.session.Session.save>`.
         '''
-        self._cache.save()
+        self.save()
 
     def destroy(self):
         '''

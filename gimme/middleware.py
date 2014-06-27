@@ -224,7 +224,8 @@ def cookie_parser():
 
 
 def session(cache='gimme.cache.memory', session_cookie='gimme_session',
-        make_session_key=uuid.uuid4, expiration_time=60*60*24*7, **kwargs):
+        make_session_key=uuid.uuid4, expiration_time=60*60*24*7,
+        attribute_name='session', **kwargs):
     '''
     Adds session functionality, accessible via ``request.session``.
 
@@ -241,12 +242,20 @@ def session(cache='gimme.cache.memory', session_cookie='gimme_session',
         expiration_time=expiration_time, **kwargs)
 
     class SessionMiddleware(Middleware):
+        @property
+        def session(self):
+            return getattr(self.request, attribute_name)
+
+        @session.setter
+        def session(self, value):
+            setattr(self.request, attribute_name, value)
+
         def enter(self):
-            self.request.session = self._load_session()
+            self.session = self._load_session()
 
         def exit(self):
-            if self.request.session._state.is_dirty():
-                self.request.session.save()
+            if self.session._state.is_dirty():
+                self.session.save()
 
         def _load_session(self):
             try:
@@ -263,7 +272,8 @@ def session(cache='gimme.cache.memory', session_cookie='gimme_session',
 
         def _create_session(self):
             key = str(make_session_key())
-            self.response.set('Set-Cookie', '%s=%s' % (session_cookie, key))
+            self.response.headers.add_header(
+              ('Set-Cookie', '%s=%s' % (session_cookie, key)))
             new_session = Session(region, key, {}, True)
             return new_session
 
