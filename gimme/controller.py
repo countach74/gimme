@@ -84,34 +84,15 @@ class MethodRenderer(list):
         '''
         return Format(BulkRenderer(list(self[1:])), content_type)
 
-    def template(self, template_path):
-        '''
-        Adds a :class:`Template <gimme.renderers.Template>` object with the
-        provided path to the list.
-
-        :param str template_path: The path to the template
-        :return: self
-        '''
-        self.append(Template(template_path))
-        return self
-
-    def json(self):
-        '''
-        Adds a :class:`Json <gimme.renderers.Json>` object to the list.
-
-        :return: self
-        '''
-        self.append(Json())
-        return self
-
-    def compress(self):
-        '''
-        Adds a :class:`Compress <gimme.renderers.Compress>` object to the list.
-
-        :return: self
-        '''
-        self.append(Compress())
-        return self
+    def __getattr__(self, key):
+        renderer = self.im_class._get_renderer(key, None)
+        if renderer:
+            def wrapped(*args, **kwargs):
+                self.append(renderer(*args, **kwargs))
+                return self
+            return wrapped
+        else:
+            raise AttributeError
 
     @property
     def controllers(self):
@@ -179,29 +160,14 @@ class ControllerMethod(object):
         '''
         return Format(BulkRenderer([]), content_type)
 
-    def template(self, template_path):
-        '''
-        Returns a :class:`gimme.controller.MethodRenderer` object with a
-        :class:`gimme.renderers.Template` renderer directed at the path
-        provided by ``template_path``.
-
-        :param str template_path: Where to point the template to.
-        '''
-        return MethodRenderer([self, Template(template_path)])
-
-    def json(self):
-        '''
-        Returns a :class:`gimme.controller.MethodRenderer` object with a
-        :class:`gimme.renderers.Json` renderer.
-        '''
-        return MethodRenderer([self, Json()])
-
-    def compress(self):
-        '''
-        Returns a :class:`gimme.controller.MethodRenderer` object with a
-        :class:`gimme.renderers.Compress` renderer.
-        '''
-        return MethodRenderer([self, Compress()])
+    def __getattr__(self, key):
+        renderer = self.im_class._get_renderer(key, None)
+        if renderer:
+            def wrapped(*args, **kwargs):
+                return MethodRenderer([self, renderer(*args, **kwargs)])
+            return wrapped
+        else:
+            raise AttributeError
 
     @property
     def controllers(self):
@@ -257,6 +223,12 @@ class Controller(object):
     '''
     __metaclass__ = ControllerMeta
 
+    method_renderers = {
+      'json': Json,
+      'template': Template,
+      'compress': Compress
+    }
+
     def __init__(self, app=None):
         self.app = app
 
@@ -269,6 +241,14 @@ class Controller(object):
                 attr.controller_instance = obj
 
         return obj
+
+    @classmethod
+    def _get_renderer(cls, key, default=None):
+        if key in cls.method_renderers:
+            return cls.method_renderers[key]
+        elif hasattr(cls.__bases__[0], '_get_renderer'):
+            return cls.__bases__[0]._get_renderer(key, default)
+        return default
 
 
 class ErrorController(Controller):
